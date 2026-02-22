@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../services/supabase';
+import { registerForPushNotifications } from '../services/notifications';
 
 type AuthContextType = {
   session: Session | null;
@@ -54,6 +55,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setLoading(false);
         if (event === 'PASSWORD_RECOVERY') {
           setPasswordRecovery(true);
+        }
+        if (event === 'SIGNED_IN') {
+          registerForPushNotifications().catch(console.warn);
         }
       }
     );

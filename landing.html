@@ -138,6 +138,42 @@
       color: var(--text-muted);
       font-size: 13px;
     }
+    /* ── STORE BADGES ── */
+    .store-badges {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 32px;
+    }
+    .store-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--nav-dark);
+      color: #fff;
+      text-decoration: none;
+      padding: 12px 22px;
+      border-radius: 14px;
+      transition: opacity 0.2s;
+      min-width: 160px;
+    }
+    .store-badge:hover { opacity: 0.85; }
+    .store-badge svg { flex-shrink: 0; }
+    .store-badge-text { text-align: left; }
+    .store-badge-sub {
+      display: block;
+      font-size: 10px;
+      opacity: 0.7;
+      letter-spacing: 0.3px;
+      margin-bottom: 2px;
+    }
+    .store-badge-name {
+      display: block;
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
     .success-msg {
       display: none;
       color: var(--green);
@@ -563,20 +599,36 @@
       <img src="assets/logo.png" alt="U Funny" onerror="this.style.display='none'" />
       <span class="nav-logo-text">☺ u funny</span>
     </a>
-    <a href="#waitlist" class="nav-cta">Join Waitlist</a>
+    <a href="#download" class="nav-cta">Download</a>
   </nav>
 
   <!-- HERO -->
   <section class="hero">
-    <div class="hero-badge">⭐ Now in Beta</div>
+    <div class="hero-badge">⭐ Now Available — Free Download</div>
     <h1>The App Built for <span>Stand-Up Comedians</span></h1>
     <p>Find open mics, write better bits, get real feedback, and grow your comedy career — all in one place.</p>
-    <form class="hero-form" id="hero-form">
-      <input type="email" placeholder="your@email.com" required />
-      <button type="submit">Get Early Access</button>
-    </form>
-    <p class="hero-note">Free to join. No credit card required.</p>
-    <p class="success-msg" id="hero-success">🎤 You're on the list! We'll be in touch soon.</p>
+
+    <!-- Store Download Buttons -->
+    <div class="store-badges" id="download">
+      <!-- iOS App Store — update href once approved -->
+      <a href="https://apps.apple.com/app/u-funny/id000000000" class="store-badge" target="_blank" rel="noopener">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="white"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+        <span class="store-badge-text">
+          <span class="store-badge-sub">Download on the</span>
+          <span class="store-badge-name">App Store</span>
+        </span>
+      </a>
+      <!-- Google Play — update href once approved -->
+      <a href="https://play.google.com/store/apps/details?id=com.ufunny.app" class="store-badge" target="_blank" rel="noopener">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="white"><path d="M3 20.5v-17c0-.83.94-1.3 1.6-.8l14 8.5c.6.37.6 1.24 0 1.6l-14 8.5c-.66.5-1.6.03-1.6-.8z"/></svg>
+        <span class="store-badge-text">
+          <span class="store-badge-sub">Get it on</span>
+          <span class="store-badge-name">Google Play</span>
+        </span>
+      </a>
+    </div>
+
+    <p class="hero-note" style="margin-top:16px;">Free to download. No credit card required.</p>
   </section>
 
   <!-- PHONE MOCKUP STRIP -->

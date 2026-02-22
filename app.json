@@ -68,7 +68,15 @@
           "cameraPermission": "U Funny needs camera access to scan QR codes for venue check-in."
         }
       ],
-      "expo-video"
+      "expo-video",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/smiley-icon.png",
+          "color": "#6b8e6f",
+          "sounds": []
+        }
+      ]
     ]
   }
 }
