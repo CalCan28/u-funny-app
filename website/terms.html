@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Terms of Service – U Funny</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg:        #f5f1e8;
+      --card-bg:   #fdfcfa;
+      --green:     #6b8e6f;
+      --green-dk:  #556f59;
+      --gold:      #e8b944;
+      --text-dark: #5c4a3a;
+      --text-muted:#9b8b7a;
+      --nav-dark:  #3d3126;
+      --border:    #d9d1c3;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text-dark);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      line-height: 1.7;
+    }
+
+    /* NAV */
+    nav {
+      background: var(--nav-dark);
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+    }
+    .nav-logo img { height: 52px; }
+    .nav-cta {
+      background: var(--green);
+      color: #fff;
+      padding: 10px 22px;
+      border-radius: 999px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 15px;
+      transition: background 0.2s;
+    }
+    .nav-cta:hover { background: var(--green-dk); }
+
+    /* CONTENT */
+    .page-header {
+      background: var(--nav-dark);
+      color: #fff;
+      padding: 56px 24px 48px;
+      text-align: center;
+    }
+    .page-header h1 {
+      font-size: clamp(28px, 5vw, 44px);
+      font-weight: 800;
+      margin-bottom: 12px;
+    }
+    .page-header p { color: rgba(255,255,255,0.7); font-size: 16px; }
+
+    .content {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 56px 24px 80px;
+    }
+
+    .section {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 32px;
+      margin-bottom: 24px;
+      border: 1px solid var(--border);
+    }
+
+    .section h2 {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text-dark);
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid var(--border);
+    }
+
+    .section h2 span {
+      color: var(--green);
+      margin-right: 8px;
+    }
+
+    .section p {
+      color: var(--text-dark);
+      margin-bottom: 12px;
+      font-size: 15px;
+    }
+
+    .section p:last-child { margin-bottom: 0; }
+
+    .section ul {
+      list-style: none;
+      padding: 0;
+      margin-top: 8px;
+    }
+
+    .section ul li {
+      padding: 6px 0 6px 20px;
+      position: relative;
+      font-size: 15px;
+      color: var(--text-dark);
+    }
+
+    .section ul li::before {
+      content: '•';
+      position: absolute;
+      left: 0;
+      color: var(--green);
+      font-weight: 700;
+    }
+
+    .highlight-box {
+      background: #eef4ef;
+      border-left: 4px solid var(--green);
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin-top: 16px;
+      font-size: 15px;
+      color: var(--text-dark);
+    }
+
+    .warning-box {
+      background: #fef9ec;
+      border-left: 4px solid var(--gold);
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin-top: 16px;
+      font-size: 15px;
+      color: var(--text-dark);
+    }
+
+    .contact-box {
+      background: var(--nav-dark);
+      border-radius: 16px;
+      padding: 32px;
+      text-align: center;
+      color: #fff;
+      margin-top: 32px;
+    }
+    .contact-box h3 {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .contact-box p { color: rgba(255,255,255,0.75); margin-bottom: 16px; }
+    .contact-box a {
+      color: var(--gold);
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .contact-box a:hover { text-decoration: underline; }
+
+    /* FOOTER */
+    footer {
+      background: var(--nav-dark);
+      color: rgba(255,255,255,0.6);
+      text-align: center;
+      padding: 32px 24px;
+      font-size: 14px;
+    }
+    footer img { height: 40px; margin-bottom: 12px; display: block; margin-left: auto; margin-right: auto; }
+    footer a { color: rgba(255,255,255,0.6); text-decoration: none; margin: 0 12px; }
+    footer a:hover { color: #fff; }
+    .footer-links { margin: 12px 0 16px; }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav>
+    <a href="/" class="nav-logo">
+      <img src="assets/logo.png" alt="U Funny" />
+    </a>
+    <a href="/#waitlist" class="nav-cta">Join Waitlist</a>
+  </nav>
+
+  <!-- HEADER -->
+  <div class="page-header">
+    <h1>Terms of Service</h1>
+    <p>Last updated: February 2026</p>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="content">
+
+    <div class="section">
+      <h2><span>👋</span>Welcome to U Funny</h2>
+      <p>These Terms of Service ("Terms") govern your use of the U Funny mobile application and website (collectively, the "Service"), operated by U Funny ("we," "us," or "our").</p>
+      <p>By creating an account or using U Funny, you agree to be bound by these Terms. If you do not agree, please do not use the Service.</p>
+    </div>
+
+    <div class="section">
+      <h2><span>🎂</span>Eligibility</h2>
+      <p>You must be at least <strong>13 years old</strong> to use U Funny. By using the Service, you confirm that you meet this requirement.</p>
+      <p>If you are under 18, you represent that your parent or legal guardian has reviewed and agreed to these Terms on your behalf.</p>
+      <p>U Funny is intended for individual, personal use. You may not use it for automated or commercial data scraping purposes.</p>
+    </div>
+
+    <div class="section">
+      <h2><span>📝</span>Your Account</h2>
+      <p>When you create an account, you agree to:</p>
+      <ul>
+        <li>Provide accurate and truthful information</li>
+        <li>Keep your password secure and confidential</li>
+        <li>Notify us immediately of any unauthorized access to your account</li>
+        <li>Be responsible for all activity that occurs under your account</li>
+      </ul>
+      <p style="margin-top:12px;">You may not create an account on behalf of someone else without their permission.</p>
+    </div>
+
+    <div class="section">
+      <h2><span>🎤</span>Your Content</h2>
+      <p>U Funny allows you to create, upload, and share content including comedy bits, set lists, videos, critiques, and profile information ("Your Content").</p>
+      <p><strong>You own your content.</strong> By uploading or sharing content on U Funny, you grant us a limited license to store, display, and deliver that content within the app solely to provide the Service to you and other users.</p>
+      <p>We do not claim ownership of your jokes, sets, or videos. You can delete your content at any time.</p>
+      <div class="highlight-box">
+        Your comedy is yours. We're just the stage.
+      </div>
+    </div>
+
+    <div class="section">
+      <h2><span>🚫</span>Prohibited Conduct</h2>
+      <p>You agree not to use U Funny to:</p>
+      <ul>
+        <li>Post content that is illegal, threatening, harassing, or abusive</li>
+        <li>Impersonate another person or misrepresent your identity</li>
+        <li>Upload content that infringes on someone else's copyright or intellectual property</li>
+        <li>Spam, solicit, or send unsolicited messages to other users</li>
+        <li>Attempt to hack, reverse engineer, or compromise the security of the app</li>
+        <li>Use automated scripts or bots to interact with the Service</li>
+        <li>Post content that is discriminatory based on race, religion, gender, sexual orientation, disability, or national origin</li>
+        <li>Upload malware or harmful code of any kind</li>
+      </ul>
+      <div class="warning-box">
+        Violations may result in immediate account suspension or termination.
+      </div>
+    </div>
+
+    <div class="section">
+      <h2><span>🤖</span>AI Comedy Coach</h2>
+      <p>U Funny includes an AI Comedy Coach feature powered by third-party AI technology. By using this feature, you understand that:</p>
+      <ul>
+        <li>AI-generated feedback is for entertainment and creative inspiration only</li>
+        <li>Suggestions are not guaranteed to be accurate, appropriate, or suitable for all audiences</li>
+        <li>You are responsible for any content you perform publicly based on AI suggestions</li>
+        <li>Content you submit to the AI Coach may be processed by our AI provider to generate responses</li>
+      </ul>
+    </div>
+
+    <div class="section">
+      <h2><span>💳</span>Premium Subscription</h2>
+      <p>U Funny offers a free tier and an optional Premium subscription. Premium features may include additional AI coaching sessions, advanced analytics, and other benefits as described in the app.</p>
+      <ul>
+        <li>Subscriptions are billed through the Apple App Store or Google Play Store</li>
+        <li>Subscriptions automatically renew unless cancelled at least 24 hours before the renewal date</li>
+        <li>Refunds are handled in accordance with Apple's and Google's refund policies</li>
+        <li>We reserve the right to modify Premium pricing with reasonable advance notice</li>
+      </ul>
+    </div>
+
+    <div class="section">
+      <h2><span>🛡️</span>Our Rights</h2>
+      <p>We reserve the right to:</p>
+      <ul>
+        <li>Modify, suspend, or discontinue any part of the Service at any time</li>
+        <li>Remove content that violates these Terms or that we deem harmful to the community</li>
+        <li>Suspend or terminate accounts that violate these Terms</li>
+        <li>Update these Terms at any time with notice to users</li>
+      </ul>
+    </div>
+
+    <div class="section">
+      <h2><span>⚖️</span>Disclaimer of Warranties</h2>
+      <p>U Funny is provided "as is" and "as available" without warranties of any kind, either express or implied. We do not guarantee that the Service will be uninterrupted, error-free, or free of viruses or other harmful components.</p>
+      <p>We are not responsible for the accuracy of open mic listings, venue information, or user-generated content posted on the platform.</p>
+    </div>
+
+    <div class="section">
+      <h2><span>📉</span>Limitation of Liability</h2>
+      <p>To the fullest extent permitted by law, U Funny and its team shall not be liable for any indirect, incidental, special, or consequential damages arising from your use of the Service, including but not limited to loss of data, loss of profits, or damages resulting from content posted by other users.</p>
+      <p>Our total liability to you for any claims arising from your use of the Service shall not exceed the amount you paid us in the 12 months prior to the claim.</p>
+    </div>
+
+    <div class="section">
+      <h2><span>🗺️</span>Governing Law</h2>
+      <p>These Terms are governed by the laws of the United States. Any disputes arising from these Terms or your use of U Funny will be resolved through binding arbitration rather than in court, except where prohibited by law.</p>
+    </div>
+
+    <div class="section">
+      <h2><span>🔄</span>Changes to These Terms</h2>
+      <p>We may update these Terms from time to time. We will notify you of significant changes via the app or by email. The "Last updated" date at the top will always reflect the current version.</p>
+      <p>Continued use of U Funny after changes are posted constitutes your acceptance of the updated Terms.</p>
+    </div>
+
+    <div class="contact-box">
+      <h3>Questions About These Terms?</h3>
+      <p>We're happy to clarify anything. Get in touch anytime.</p>
+      <a href="mailto:legal@ufunny.app">legal@ufunny.app</a>
+    </div>
+
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    <img src="assets/logo.png" alt="U Funny" />
+    <div class="footer-links">
+      <a href="/">Home</a>
+      <a href="/privacy.html">Privacy Policy</a>
+      <a href="/terms.html">Terms of Service</a>
+    </div>
+    <p>&copy; 2026 U Funny. All rights reserved.</p>
+  </footer>
+
+</body>
+</html>
