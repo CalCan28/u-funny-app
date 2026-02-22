@@ -1,0 +1,74 @@
+{
+  "expo": {
+    "name": "U Funny",
+    "slug": "u-funny-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "scheme": "ufunny",
+    "icon": "./assets/logo.png",
+    "splash": {
+      "image": "./assets/logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1a1a2e"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.ufunny.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "U Funny needs your location to find open mics near you.",
+        "NSCameraUsageDescription": "U Funny needs camera access to scan QR codes for venue check-in.",
+        "NSPhotoLibraryUsageDescription": "U Funny needs access to save QR codes and recordings to your photos.",
+        "NSMicrophoneUsageDescription": "U Funny needs microphone access to record your performances."
+      },
+      "associatedDomains": ["applinks:ufunny.app"]
+    },
+    "android": {
+      "package": "com.ufunny.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/logo.png",
+        "backgroundColor": "#1a1a2e"
+      },
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "CAMERA",
+        "RECORD_AUDIO",
+        "WRITE_EXTERNAL_STORAGE",
+        "READ_EXTERNAL_STORAGE"
+      ],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "ufunny"
+            },
+            {
+              "scheme": "https",
+              "host": "ufunny.app",
+              "pathPrefix": "/join"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "U Funny needs your location to find open mics near you."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "U Funny needs camera access to scan QR codes for venue check-in."
+        }
+      ],
+      "expo-video"
+    ]
+  }
+}
