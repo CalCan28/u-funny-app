@@ -9,6 +9,7 @@ import {
   ScrollView,
   Alert,
   Platform,
+  StatusBar,
   Modal,
   ActivityIndicator,
 } from 'react-native';
@@ -850,6 +851,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   header: {
     flexDirection: 'row',
