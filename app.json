@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
     "scheme": "ufunny",
-    "icon": "./assets/logo.png",
+    "icon": "./assets/icon.png",
     "splash": {
       "image": "./assets/logo.png",
       "resizeMode": "contain",
@@ -28,7 +28,7 @@
     "android": {
       "package": "com.ufunny.app",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/logo.png",
+        "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#f5f1e8"
       },
       "splash": {
