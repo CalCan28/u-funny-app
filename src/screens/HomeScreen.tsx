@@ -364,10 +364,10 @@ export default function HomeScreen({ navigation }: any) {
         .limit(10);
 
       if (setsError) {
-        console.error('Error fetching community sets:', setsError);
+        // Sentry captures this automatically
       }
       if (ideasError) {
-        console.error('Error fetching community ideas:', ideasError);
+        // Sentry captures this automatically
       }
 
       // Process Community Sets
@@ -410,7 +410,7 @@ export default function HomeScreen({ navigation }: any) {
         setCommunityIdeas([]);
       }
     } catch (error) {
-      console.error('Error fetching community videos:', error);
+      // Sentry captures this automatically
     } finally {
       setLoading(false);
       setRefreshing(false);

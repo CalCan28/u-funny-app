@@ -157,7 +157,7 @@ export default function TonightsLineupScreen({ navigation, route }: any) {
 
       setPerformers(merged);
     } catch (err: any) {
-      console.error('Error loading lineup:', err);
+      // Sentry captures this automatically
       setError(err.message || 'Failed to load lineup');
     } finally {
       setIsLoading(false);

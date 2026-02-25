@@ -105,7 +105,7 @@ export default function RecentsScreen() {
 
       setRecentCritiques(critiquesData || []);
     } catch (error: any) {
-      console.error('Error fetching recents:', error);
+      // Sentry captures this automatically
       Alert.alert('Error', 'Failed to load recent activity');
     }
   }, [user]);

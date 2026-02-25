@@ -21,7 +21,9 @@
         "NSPhotoLibraryUsageDescription": "U Funny needs access to save QR codes and recordings to your photos.",
         "NSMicrophoneUsageDescription": "U Funny needs microphone access to record your performances."
       },
-      "associatedDomains": ["applinks:ufunny.app"]
+      "associatedDomains": [
+        "applinks:ufunny.app"
+      ]
     },
     "android": {
       "package": "com.ufunny.app",
@@ -35,7 +37,11 @@
         "CAMERA",
         "RECORD_AUDIO",
         "WRITE_EXTERNAL_STORAGE",
-        "READ_EXTERNAL_STORAGE"
+        "READ_EXTERNAL_STORAGE",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
       ],
       "intentFilters": [
         {
@@ -51,7 +57,10 @@
               "pathPrefix": "/join"
             }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ]
     },
@@ -76,7 +85,19 @@
           "color": "#6b8e6f",
           "sounds": []
         }
+      ],
+      [
+        "@sentry/react-native/expo",
+        {
+          "organization": "u-funny",
+          "project": "u-funny-app"
+        }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "bb9638ab-a39b-4e8c-9226-c342c07992a0"
+      }
+    }
   }
 }

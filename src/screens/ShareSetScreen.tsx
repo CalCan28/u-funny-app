@@ -137,7 +137,7 @@ export default function ShareSetScreen() {
       setCustomTitle(data.title);
       setUploadMethod('youtube');
     } catch (error) {
-      console.error('Error fetching YouTube data:', error);
+      // Sentry captures this automatically
       // Still allow submission with manual thumbnail
       setVideoData({
         title: '',
@@ -195,7 +195,7 @@ export default function ShareSetScreen() {
           });
           thumbnailUri = thumbnail.uri;
         } catch (thumbError) {
-          console.log('Could not generate thumbnail, using video URI');
+          // Sentry captures this automatically
         }
 
         setVideoData({
@@ -207,7 +207,7 @@ export default function ShareSetScreen() {
         setUploadMethod('library');
       }
     } catch (error) {
-      console.error('Error picking video:', error);
+      // Sentry captures this automatically
       Alert.alert('Error', 'Failed to pick video from library');
     }
   };
@@ -240,7 +240,6 @@ export default function ShareSetScreen() {
         });
 
       if (videoError) {
-        console.error('Video upload error:', videoError);
         throw new Error('Failed to upload video');
       }
 
@@ -276,7 +275,7 @@ export default function ShareSetScreen() {
           thumbnailUrl = thumbUrlData.publicUrl;
         }
       } catch (thumbError) {
-        console.log('Thumbnail upload failed, using placeholder');
+        // Sentry captures this automatically
       }
 
       setUploadProgress(100);
@@ -286,7 +285,7 @@ export default function ShareSetScreen() {
         thumbnailUrl: thumbnailUrl || videoUrlData.publicUrl,
       };
     } catch (error) {
-      console.error('Upload error:', error);
+      // Sentry captures this automatically
       return null;
     } finally {
       setUploading(false);
@@ -370,7 +369,7 @@ export default function ShareSetScreen() {
 
       setShowSuccess(true);
     } catch (error: any) {
-      console.error('Error saving video:', error);
+      // Sentry captures this automatically
       Alert.alert('Error', error.message || 'Failed to share your set. Please try again.');
     } finally {
       setLoading(false);

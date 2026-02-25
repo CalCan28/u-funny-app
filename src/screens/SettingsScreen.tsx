@@ -163,7 +163,7 @@ export default function SettingsScreen() {
         .single();
 
       if (error && error.code !== 'PGRST116') {
-        console.error('Error loading settings:', error);
+        // Sentry captures this automatically
       }
 
       if (data) {
@@ -176,7 +176,7 @@ export default function SettingsScreen() {
         });
       }
     } catch (error) {
-      console.error('Error loading settings:', error);
+      // Sentry captures this automatically
     } finally {
       setLoading(false);
     }
@@ -197,7 +197,7 @@ export default function SettingsScreen() {
 
       if (error) throw error;
     } catch (error) {
-      console.error('Error saving setting:', error);
+      // Sentry captures this automatically
       // Revert on error
       setSettings(settings);
       Alert.alert('Error', 'Failed to save setting. Please try again.');

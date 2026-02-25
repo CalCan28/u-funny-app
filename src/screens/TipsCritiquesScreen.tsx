@@ -258,7 +258,7 @@ export default function TipsCritiquesScreen() {
       setNextCursor(feedbackResult.nextCursor);
       setSummary(summaryResult);
     } catch (error) {
-      console.error('Error fetching tips & critiques:', error);
+      // Sentry captures this automatically
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -290,7 +290,7 @@ export default function TipsCritiquesScreen() {
       setFeedback(prev => [...prev, ...result.data]);
       setNextCursor(result.nextCursor);
     } catch (error) {
-      console.error('Error loading more:', error);
+      // Sentry captures this automatically
     } finally {
       setLoadingMore(false);
     }

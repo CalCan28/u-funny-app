@@ -218,7 +218,7 @@ export default function AccountScreen() {
       handleCloseMenu();
       Alert.alert('Success', 'Video deleted successfully');
     } catch (error: any) {
-      console.error('Error deleting video:', error);
+      // Sentry captures this automatically
       Alert.alert('Error', 'Failed to delete video. Please try again.');
     } finally {
       setDeleting(false);

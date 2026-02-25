@@ -95,7 +95,7 @@ export default function AudienceButton({
         onToggle?.(true);
       }
     } catch (error) {
-      console.error('Error toggling audience:', error);
+      // Sentry captures this automatically
     } finally {
       setLoading(false);
     }

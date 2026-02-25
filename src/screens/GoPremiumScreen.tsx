@@ -8,6 +8,7 @@ import {
   ScrollView,
   Animated,
   Dimensions,
+  Alert,
 } from 'react-native';
 
 const { width } = Dimensions.get('window');
@@ -209,9 +210,11 @@ export default function GoPremiumScreen({
     if (onUpgrade) {
       onUpgrade(selectedPlan);
     } else {
-      // Default behavior - navigate to payment or show alert
-      console.log(`Upgrading to ${selectedPlan} plan`);
-      // In real app: navigate to payment flow
+      Alert.alert(
+        'Coming Soon!',
+        'Premium subscriptions are launching soon. We\'ll notify you when it\'s ready!',
+        [{ text: 'Got it', style: 'default' }]
+      );
     }
   };
 

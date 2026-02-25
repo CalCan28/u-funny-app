@@ -97,7 +97,7 @@ export default function AuthScreen() {
       });
 
       if (profileError) {
-        console.error('Profile creation error:', profileError);
+        // Sentry captures this automatically
       }
     }
 

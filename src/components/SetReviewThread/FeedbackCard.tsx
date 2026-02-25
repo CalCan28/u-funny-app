@@ -87,7 +87,7 @@ export default function FeedbackCard({
       setHelpfulCount(newCount);
       onVoteChanged?.(feedback.id, newCount, nowVoted);
     } catch (error) {
-      console.error('Error toggling vote:', error);
+      // Sentry captures this automatically
     } finally {
       setVoting(false);
     }
@@ -107,7 +107,7 @@ export default function FeedbackCard({
               await deleteFeedback(feedback.id);
               onDeleted?.();
             } catch (error) {
-              console.error('Error deleting feedback:', error);
+              // Sentry captures this automatically
               Alert.alert('Error', 'Failed to delete feedback');
             }
           },

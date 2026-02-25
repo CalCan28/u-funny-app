@@ -71,7 +71,7 @@ export default function ConnectionsScreen() {
           .eq('audience_member_id', targetUserId);
 
         if (audienceError) {
-          console.error('Error fetching jokers:', audienceError);
+          // Sentry captures this automatically
           setLoading(false);
           return;
         }
@@ -98,7 +98,7 @@ export default function ConnectionsScreen() {
           .eq('comedian_id', targetUserId);
 
         if (audienceError) {
-          console.error('Error fetching audience:', audienceError);
+          // Sentry captures this automatically
           setLoading(false);
           return;
         }
@@ -119,7 +119,7 @@ export default function ConnectionsScreen() {
         setUsers(profiles || []);
       }
     } catch (error) {
-      console.error('Error fetching users:', error);
+      // Sentry captures this automatically
     } finally {
       setLoading(false);
     }

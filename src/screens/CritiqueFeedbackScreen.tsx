@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,10 @@ import {
   ScrollView,
   TextInput,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
+import { supabase } from '../services/supabase';
+import { useAuth } from '../contexts/AuthContext';
 
 // Design colors from Figma
 const colors = {
@@ -24,13 +27,6 @@ const colors = {
 };
 
 // Types
-type CheckInResult = {
-  success: boolean;
-  userId: string;
-  venueName: string;
-  checkedInAt: string;
-};
-
 type Performer = {
   id: string;
   name: string;
@@ -45,34 +41,6 @@ type CritiqueData = {
   performerId: string;
   reaction: Reaction;
   note: string;
-};
-
-// Mock data
-const mockPerformers: Performer[] = [
-  { id: '1', name: 'Sarah "FireStarter"', hasPerformed: true, slot: 1, isCurrentUser: false },
-  { id: '2', name: 'Mike Yunkers', hasPerformed: true, slot: 2, isCurrentUser: false },
-  { id: '3', name: 'Calvin "C Gills P"', hasPerformed: true, slot: 3, isCurrentUser: true },
-  { id: '4', name: 'Lisa Chen', hasPerformed: false, slot: 4, isCurrentUser: false },
-  { id: '5', name: 'James Wilson', hasPerformed: false, slot: 5, isCurrentUser: false },
-];
-
-// Mock async functions
-const checkInWithQr = async (qrToken: string): Promise<CheckInResult> => {
-  // Simulate API call delay
-  await new Promise(resolve => setTimeout(resolve, 1500));
-
-  // Simulate success
-  return {
-    success: true,
-    userId: 'user_123',
-    venueName: 'Comedy Club',
-    checkedInAt: new Date().toISOString(),
-  };
-};
-
-const submitCritique = async (critique: CritiqueData): Promise<{ success: boolean }> => {
-  await new Promise(resolve => setTimeout(resolve, 800));
-  return { success: true };
 };
 
 // Reaction button component
@@ -259,10 +227,12 @@ function PerformerCritiqueCard({
 }
 
 export default function CritiqueFeedbackScreen({ navigation, route }: any) {
+  const { user } = useAuth();
+  const eventId = route?.params?.eventId;
   const [isCheckedIn, setIsCheckedIn] = useState(false);
   const [hasPerformed, setHasPerformed] = useState(false);
-  const [isCheckingIn, setIsCheckingIn] = useState(false);
-  const [checkInError, setCheckInError] = useState<string | null>(null);
+  const [performers, setPerformers] = useState<Performer[]>([]);
+  const [loading, setLoading] = useState(true);
   const [venueName, setVenueName] = useState(route?.params?.venueName || 'Comedy Club');
   const [submittedCritiques, setSubmittedCritiques] = useState<string[]>([]);
 
@@ -273,49 +243,99 @@ export default function CritiqueFeedbackScreen({ navigation, route }: any) {
     day: 'numeric',
   });
 
-  // Find current user in performers
-  const currentUser = mockPerformers.find(p => p.isCurrentUser);
-
-  // Simulate that user has performed if they're past their slot
-  useEffect(() => {
-    if (isCheckedIn && currentUser) {
-      // For demo, auto-set hasPerformed after check-in
-      const timer = setTimeout(() => setHasPerformed(true), 2000);
-      return () => clearTimeout(timer);
+  // Load performers from Supabase
+  const loadPerformers = useCallback(async () => {
+    if (!eventId || !user) {
+      setLoading(false);
+      return;
     }
-  }, [isCheckedIn, currentUser]);
-
-  const handleCheckIn = async () => {
-    setIsCheckingIn(true);
-    setCheckInError(null);
 
     try {
-      // Hardcoded QR token for now - will be replaced with real QR scanning
-      const fakeQrToken = 'venue_comedy_club_2024';
-      const result = await checkInWithQr(fakeQrToken);
+      // Get event participants with their profiles
+      const { data: participants, error } = await supabase
+        .from('event_participants')
+        .select('id, user_id, lineup_position, has_performed, profiles(display_name, stage_name)')
+        .eq('event_id', eventId)
+        .order('lineup_position', { ascending: true });
 
-      if (result.success) {
+      if (error) throw error;
+
+      const mapped: Performer[] = (participants || []).map((p: any) => ({
+        id: p.user_id,
+        name: p.profiles?.stage_name || p.profiles?.display_name || 'Unknown',
+        hasPerformed: p.has_performed || false,
+        slot: p.lineup_position || 0,
+        isCurrentUser: p.user_id === user.id,
+      }));
+
+      setPerformers(mapped);
+
+      // Check if current user is checked in and has performed
+      const currentUserParticipant = mapped.find(p => p.isCurrentUser);
+      if (currentUserParticipant) {
         setIsCheckedIn(true);
-        setVenueName(result.venueName);
+        setHasPerformed(currentUserParticipant.hasPerformed);
       }
-    } catch (error) {
-      setCheckInError('Check-in failed. Please try again.');
+
+      // Load already-submitted critiques
+      const { data: existingFeedback } = await supabase
+        .from('feedback')
+        .select('receiver_id')
+        .eq('giver_id', user.id)
+        .eq('event_id', eventId);
+
+      if (existingFeedback) {
+        setSubmittedCritiques(existingFeedback.map((f: any) => f.receiver_id));
+      }
+    } catch (err) {
+      // Silently handle - performers list will just be empty
     } finally {
-      setIsCheckingIn(false);
+      setLoading(false);
     }
-  };
+  }, [eventId, user]);
+
+  useEffect(() => {
+    loadPerformers();
+  }, [loadPerformers]);
 
   const handleSubmitCritique = async (critique: CritiqueData) => {
-    const result = await submitCritique(critique);
-    if (result.success) {
+    if (!user || !eventId) return;
+
+    try {
+      const { error } = await supabase.from('feedback').insert({
+        giver_id: user.id,
+        receiver_id: critique.performerId,
+        event_id: eventId,
+        rating: critique.reaction === 'killed_it' ? 5
+          : critique.reaction === 'laughed' ? 4
+          : critique.reaction === 'chuckled' ? 3
+          : critique.reaction === 'silence' ? 2
+          : 1,
+        feedback_text: critique.note || null,
+        reaction: critique.reaction,
+      });
+
+      if (error) throw error;
       setSubmittedCritiques(prev => [...prev, critique.performerId]);
+    } catch (err) {
+      Alert.alert('Error', 'Could not submit feedback. Please try again.');
     }
   };
 
   const canCritique = isCheckedIn && hasPerformed;
 
   // Filter performers who have performed (excluding self) for critique
-  const performersToShow = mockPerformers.filter(p => !p.isCurrentUser);
+  const performersToShow = performers.filter(p => !p.isCurrentUser);
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>

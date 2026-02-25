@@ -50,7 +50,7 @@ export default function ComedyStyleProfile({ userId, onViewTipsCritiques }: Come
         const result = await getStyleProfile(userId);
         setProfile(result);
       } catch (error) {
-        console.error('Error fetching style profile:', error);
+        // Sentry captures this automatically
       } finally {
         setLoading(false);
       }

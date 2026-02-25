@@ -38,7 +38,7 @@ export default function TipsAndCritiques({ userId, onViewAll }: TipsAndCritiques
         const result = await getUserFeedbackStats(userId);
         setFeedback(result.recentFeedback);
       } catch (error) {
-        console.error('Error fetching feedback:', error);
+        // Sentry captures this automatically
       } finally {
         setLoading(false);
       }

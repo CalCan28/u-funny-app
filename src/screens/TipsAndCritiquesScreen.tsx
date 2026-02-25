@@ -85,7 +85,7 @@ export default function TipsAndCritiquesScreen() {
         setAverageRating(null);
       }
     } catch (error: any) {
-      console.error('Error fetching feedback:', error);
+      // Sentry captures this automatically
       Alert.alert('Error', 'Failed to load feedback');
     }
   }, [user]);
@@ -132,7 +132,7 @@ export default function TipsAndCritiquesScreen() {
       await fetchFeedback();
       Alert.alert('Success', 'Feedback updated');
     } catch (error: any) {
-      console.error('Error updating feedback:', error);
+      // Sentry captures this automatically
       Alert.alert('Error', error.message || 'Failed to update feedback');
     } finally {
       setSaving(false);
@@ -151,7 +151,7 @@ export default function TipsAndCritiquesScreen() {
       await fetchFeedback();
       Alert.alert('Success', 'Feedback deleted');
     } catch (error: any) {
-      console.error('Error deleting feedback:', error);
+      // Sentry captures this automatically
       Alert.alert('Error', error.message || 'Failed to delete feedback');
     }
   };

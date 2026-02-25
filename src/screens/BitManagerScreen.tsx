@@ -178,9 +178,6 @@ const sendChatMessage = async (
     .filter((m) => m.id !== '0')
     .map((m) => ({ role: m.role, content: m.content }));
 
-  console.log('BitManager: Sending to:', `${API_BASE_URL}/chat`);
-  console.log('BitManager: Message:', userMessage.slice(0, 50) + '...');
-
   try {
     const response = await fetch(`${API_BASE_URL}/chat`, {
       method: 'POST',
@@ -193,18 +190,15 @@ const sendChatMessage = async (
       }),
     });
 
-    console.log('BitManager: Response status:', response.status);
-
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('BitManager: API Error:', errorText);
       throw new Error('Failed to get response from AI coach');
     }
 
     const data = await response.json();
     return data.response;
   } catch (error) {
-    console.error('BitManager: Fetch error:', error);
+    // Sentry captures this automatically
     throw error;
   }
 };
@@ -1373,13 +1367,10 @@ function RecordingModal({ visible, onClose, isPremium, onNavigateToPremium, onRe
 
   const handleStartRecording = async () => {
     if (!cameraRef.current) {
-      console.log('No camera ref available');
       return;
     }
 
     try {
-      console.log('Starting recording...');
-
       // Configure audio mode for video recording
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: true,
@@ -1393,12 +1384,9 @@ function RecordingModal({ visible, onClose, isPremium, onNavigateToPremium, onRe
       await ensureRecordingsDir();
 
       // Start video recording - this promise resolves when recording stops
-      console.log('Calling recordAsync with maxDuration:', totalDurationRef.current);
       const video = await cameraRef.current.recordAsync({
         maxDuration: totalDurationRef.current,
       });
-
-      console.log('Recording finished, video result:', JSON.stringify(video, null, 2));
 
       // Recording finished (either by timer or manual stop)
       // At this point, the recording has stopped
@@ -1408,16 +1396,14 @@ function RecordingModal({ visible, onClose, isPremium, onNavigateToPremium, onRe
       }
 
       if (video && video.uri) {
-        console.log('Video URI received:', video.uri);
         await saveRecording(video.uri, recordedTimeRef.current);
       } else {
-        console.error('No video URI returned, video object:', video);
         Alert.alert('Recording Error', 'No video was captured. Please try again.');
       }
 
       setIsRecording(false);
     } catch (error) {
-      console.error('Recording error:', error);
+      // Sentry captures this automatically
       Alert.alert('Recording Error', `Failed to record video: ${error}`);
       setIsRecording(false);
       if (timerRef.current) {
@@ -1437,11 +1423,8 @@ function RecordingModal({ visible, onClose, isPremium, onNavigateToPremium, onRe
 
   const saveRecording = async (videoUri: string, finalRecordedTime: number) => {
     try {
-      console.log('Saving recording from:', videoUri);
-
       // Check source file exists and has content
       const sourceInfo = await FileSystem.getInfoAsync(videoUri, { size: true });
-      console.log('Source file info:', JSON.stringify(sourceInfo, null, 2));
 
       if (!sourceInfo.exists) {
         throw new Error('Source video file does not exist');
@@ -1459,7 +1442,6 @@ function RecordingModal({ visible, onClose, isPremium, onNavigateToPremium, onRe
       await ensureRecordingsDir();
 
       // Copy to app's recordings directory for reliable playback
-      console.log('Copying to local storage:', localUri);
       await FileSystem.copyAsync({
         from: videoUri,
         to: localUri,
@@ -1467,7 +1449,6 @@ function RecordingModal({ visible, onClose, isPremium, onNavigateToPremium, onRe
 
       // Verify the copy worked
       const localInfo = await FileSystem.getInfoAsync(localUri, { size: true });
-      console.log('Local file info:', JSON.stringify(localInfo, null, 2));
 
       if (!localInfo.exists || localInfo.size === 0) {
         throw new Error('Failed to copy video file');
@@ -1475,8 +1456,8 @@ function RecordingModal({ visible, onClose, isPremium, onNavigateToPremium, onRe
 
       // Also save to Photos as backup (non-blocking)
       if (mediaLibraryPermission) {
-        MediaLibrary.createAssetAsync(videoUri).catch((err) => {
-          console.log('Could not save to Photos:', err);
+        MediaLibrary.createAssetAsync(videoUri).catch(() => {
+          // Sentry captures this automatically
         });
       }
 
@@ -1496,8 +1477,6 @@ function RecordingModal({ visible, onClose, isPremium, onNavigateToPremium, onRe
           : `Set Recording ${new Date().toLocaleDateString()}`,
       };
 
-      console.log('New recording saved:', JSON.stringify(newRecording, null, 2));
-
       // Notify parent
       onRecordingSaved(newRecording);
 
@@ -1510,7 +1489,7 @@ function RecordingModal({ visible, onClose, isPremium, onNavigateToPremium, onRe
         }}]
       );
     } catch (error) {
-      console.error('Save error:', error);
+      // Sentry captures this automatically
       Alert.alert('Save Error', `Failed to save recording: ${error}`);
     }
   };
@@ -1774,45 +1753,33 @@ function VideoPlayerModal({ visible, onClose, recording }: VideoPlayerModalProps
   // Get the video URI
   const videoUri = recording?.uri || '';
 
-  console.log('VideoPlayerModal render - URI:', videoUri, 'visible:', visible);
-
   // Create video player with the recording URI
   const player = useVideoPlayer(videoUri, (p) => {
     p.loop = false;
-    console.log('Video player callback - initialized');
   });
 
   // Handle player status changes and auto-play
   useEffect(() => {
     if (!player) {
-      console.log('No player available');
       return;
     }
 
-    console.log('Setting up player listeners');
-
     const subscription = player.addListener('statusChange', (newStatus: any) => {
-      console.log('Player status:', JSON.stringify(newStatus));
-
       if (newStatus.status === 'readyToPlay') {
-        console.log('Player ready to play! Starting playback...');
         setIsLoading(false);
         setVideoError(null);
         setPlayerReady(true);
         // Auto-play when ready
         player.play();
       } else if (newStatus.status === 'error') {
-        console.log('Player error:', newStatus.error);
         setIsLoading(false);
         setVideoError(`Failed to load: ${newStatus.error || 'Unknown error'}`);
       } else if (newStatus.status === 'loading') {
-        console.log('Player loading...');
         setIsLoading(true);
       }
     });
 
     return () => {
-      console.log('Cleaning up player listeners');
       subscription.remove();
     };
   }, [player]);
@@ -2099,11 +2066,8 @@ function RecordingsLibrary({ visible, onClose, recordings, onDeleteRecording, on
 
   const handlePlayRecording = async (recording: SavedRecording) => {
     try {
-      console.log('Playing video from:', recording.uri);
-
       // Check if file exists
       const fileInfo = await FileSystem.getInfoAsync(recording.uri);
-      console.log('File exists:', fileInfo.exists);
 
       if (!fileInfo.exists) {
         Alert.alert(
@@ -2117,7 +2081,7 @@ function RecordingsLibrary({ visible, onClose, recordings, onDeleteRecording, on
       setSelectedRecording(recording);
       setShowVideoPlayer(true);
     } catch (error) {
-      console.error('Error preparing playback:', error);
+      // Sentry captures this automatically
       Alert.alert('Error', `Could not access video file: ${error}`);
     }
   };
@@ -2135,10 +2099,9 @@ function RecordingsLibrary({ visible, onClose, recordings, onDeleteRecording, on
             try {
               // Delete the local file
               await FileSystem.deleteAsync(recording.uri, { idempotent: true });
-              console.log('Deleted file:', recording.uri);
               onDeleteRecording(recording.id);
             } catch (error) {
-              console.error('Delete error:', error);
+              // Sentry captures this automatically
               // Still remove from list even if file delete fails
               onDeleteRecording(recording.id);
             }
@@ -2357,7 +2320,7 @@ export default function BitManagerScreen({ navigation }: any) {
           setRecordings(JSON.parse(data));
         }
       } catch (error) {
-        console.log('No saved recordings found');
+        // Sentry captures this automatically
       }
     };
     loadRecordings();
@@ -2370,7 +2333,7 @@ export default function BitManagerScreen({ navigation }: any) {
       const recordingsFile = RECORDINGS_DIR + 'recordings.json';
       await FileSystem.writeAsStringAsync(recordingsFile, JSON.stringify(updatedRecordings));
     } catch (error) {
-      console.error('Failed to save recordings:', error);
+      // Sentry captures this automatically
     }
   };
 

@@ -5,8 +5,17 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { NavigationContainer, LinkingOptions } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import * as Sentry from '@sentry/react-native';
 import * as Linking from 'expo-linking';
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
+import ErrorBoundary from './src/components/ErrorBoundary';
+
+Sentry.init({
+  dsn: process.env.EXPO_PUBLIC_SENTRY_DSN || '',
+  debug: __DEV__,
+  enabled: !__DEV__,
+  tracesSampleRate: 0.2,
+});
 import AuthScreen from './src/screens/AuthScreen';
 import HomeScreen from './src/screens/HomeScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
@@ -110,7 +119,7 @@ function AppNavigator() {
   // Handle deep links when app is already open
   useEffect(() => {
     const subscription = Linking.addEventListener('url', ({ url }) => {
-      console.log('Deep link received:', url);
+      // Deep link handling - Sentry breadcrumb tracks this automatically
     });
 
     return () => {
@@ -268,19 +277,23 @@ function AppNavigator() {
   );
 }
 
-export default function App() {
+function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <NavigationContainer linking={linking}>
-            <AppNavigator />
-          </NavigationContainer>
-        </AuthProvider>
-      </QueryClientProvider>
+      <ErrorBoundary>
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+            <NavigationContainer linking={linking}>
+              <AppNavigator />
+            </NavigationContainer>
+          </AuthProvider>
+        </QueryClientProvider>
+      </ErrorBoundary>
     </GestureHandlerRootView>
   );
 }
+
+export default Sentry.wrap(App);
 
 const styles = StyleSheet.create({
   loadingContainer: {

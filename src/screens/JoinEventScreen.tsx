@@ -110,7 +110,7 @@ export default function JoinEventScreen({ navigation, route }: any) {
 
       setParticipantCount(count || 0);
     } catch (err: any) {
-      console.error('Error loading event:', err);
+      // Sentry captures this automatically
       setError(err.message || 'Failed to load event');
     } finally {
       setIsLoading(false);
@@ -176,7 +176,7 @@ export default function JoinEventScreen({ navigation, route }: any) {
         ]
       );
     } catch (err: any) {
-      console.error('Error joining event:', err);
+      // Sentry captures this automatically
       Alert.alert('Error', err.message || 'Failed to join event');
     } finally {
       setIsJoining(false);

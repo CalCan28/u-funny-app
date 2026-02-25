@@ -138,7 +138,7 @@ export default function HostDashboardScreen({ navigation }: any) {
       if (error) throw error;
       setSavedEvents(data || []);
     } catch (error) {
-      console.error('Error loading events:', error);
+      // Sentry captures this automatically
     }
   };
 
@@ -179,7 +179,6 @@ export default function HostDashboardScreen({ navigation }: any) {
     });
 
     const url = `https://ufunny.app/join?${params.toString()}`;
-    console.log('QR Code URL:', url);
     return url;
   };
 

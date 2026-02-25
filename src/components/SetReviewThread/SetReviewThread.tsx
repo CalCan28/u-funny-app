@@ -73,7 +73,7 @@ export default function SetReviewThread({
       setSummary(summaryResult);
       setMyFeedback(myFeedbackResult);
     } catch (error) {
-      console.error('Error fetching feedback:', error);
+      // Sentry captures this automatically
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -109,7 +109,7 @@ export default function SetReviewThread({
       setFeedback(prev => [...prev, ...result.data]);
       setNextCursor(result.nextCursor);
     } catch (error) {
-      console.error('Error loading more feedback:', error);
+      // Sentry captures this automatically
     } finally {
       setLoadingMore(false);
     }

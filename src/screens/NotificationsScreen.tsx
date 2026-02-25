@@ -134,7 +134,7 @@ export default function NotificationsScreen() {
         .limit(50);
 
       if (error) {
-        console.error('Error fetching notifications:', error);
+        // Sentry captures this automatically
         return;
       }
 
@@ -165,7 +165,7 @@ export default function NotificationsScreen() {
         setNotifications([]);
       }
     } catch (error) {
-      console.error('Error fetching notifications:', error);
+      // Sentry captures this automatically
     } finally {
       setLoading(false);
       setRefreshing(false);

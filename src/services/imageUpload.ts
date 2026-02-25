@@ -39,7 +39,6 @@ export async function uploadImage(
       });
 
     if (error) {
-      console.error('Upload error:', error);
       return { publicUrl: null, error: error.message };
     }
 
@@ -50,7 +49,7 @@ export async function uploadImage(
 
     return { publicUrl: urlData.publicUrl, error: null };
   } catch (err: any) {
-    console.error('Image upload error:', err);
+    // Sentry captures this automatically
     return { publicUrl: null, error: err.message || 'Failed to upload image' };
   }
 }

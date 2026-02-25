@@ -131,7 +131,7 @@ export default function EditProfileScreen({ navigation }: any) {
         setOriginalProfile(profileData);
       }
     } catch (error: any) {
-      console.error('Error loading profile:', error);
+      // Sentry captures this automatically
       Alert.alert('Error', 'Failed to load profile data');
     } finally {
       setIsLoading(false);
@@ -186,7 +186,7 @@ export default function EditProfileScreen({ navigation }: any) {
         setProfile(prev => ({ ...prev, avatar_url: publicUrl }));
       }
     } catch (error: any) {
-      console.error('Image picker error:', error);
+      // Sentry captures this automatically
       Alert.alert('Error', 'Failed to select image');
     } finally {
       setIsUploadingImage(false);
@@ -239,7 +239,7 @@ export default function EditProfileScreen({ navigation }: any) {
         setProfile(prev => ({ ...prev, avatar_url: publicUrl }));
       }
     } catch (error: any) {
-      console.error('Camera error:', error);
+      // Sentry captures this automatically
       Alert.alert('Error', 'Failed to take photo');
     } finally {
       setIsUploadingImage(false);
@@ -315,7 +315,7 @@ export default function EditProfileScreen({ navigation }: any) {
         [{ text: 'OK', onPress: () => navigation.goBack() }]
       );
     } catch (error: any) {
-      console.error('Save error:', error);
+      // Sentry captures this automatically
       Alert.alert('Error', error.message || 'Failed to save profile');
     } finally {
       setIsSaving(false);

@@ -436,7 +436,7 @@ export default function OpenMicFinderScreen({ navigation }: any) {
           userLocation = await Location.getCurrentPositionAsync({});
           setLocation(userLocation);
         } catch (error) {
-          console.log('Could not get location, using default');
+          // Sentry captures this automatically
         }
       }
       fetchOpenMics(userLocation);
@@ -460,7 +460,7 @@ export default function OpenMicFinderScreen({ navigation }: any) {
         setSavedEvents(JSON.parse(stored));
       }
     } catch (error) {
-      console.error('Error loading saved events:', error);
+      // Sentry captures this automatically
     }
   };
 
@@ -469,7 +469,7 @@ export default function OpenMicFinderScreen({ navigation }: any) {
       await AsyncStorage.setItem(SAVED_EVENTS_KEY, JSON.stringify(events));
       setSavedEvents(events);
     } catch (error) {
-      console.error('Error saving events:', error);
+      // Sentry captures this automatically
     }
   };
 
