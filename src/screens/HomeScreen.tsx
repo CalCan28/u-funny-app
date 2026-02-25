@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
   Text,
@@ -13,6 +14,7 @@ import {
   ActivityIndicator,
   Platform,
   StatusBar,
+  Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../services/supabase';
@@ -22,8 +24,6 @@ import AudienceButton, { AudienceCount } from '../components/AudienceButton';
 
 // Local assets
 const logoImage = require('../../assets/logo.png');
-const canYouTopThisImage = require('../../assets/can-you-top-this.png');
-const dadJokesImage = require('../../assets/dad-jokes.png');
 const smileyIcon = require('../../assets/smiley-icon.png');
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -61,42 +61,82 @@ const formatVideoDate = (dateString: string | null) => {
 const staticFeedData = [
   {
     id: 'static-1',
-    title: 'Stand-Up Comedy Set',
+    title: 'Best Stand-Up Comedy Compilation',
     subtitle: 'Featured Performance',
-    description: 'Check out this hilarious stand-up set! Perfect timing and killer punchlines.',
+    description: 'The best stand-up comedy clips to get you inspired before your next set.',
     likes: '12.4K',
     comments: '892',
     views: '45.2K',
     featured: true,
-    youtubeId: 'ahgukMEcoy4',
-    youtubeUrl: 'https://youtu.be/ahgukMEcoy4',
+    youtubeId: 'UvANWG6cQi8',
+    youtubeUrl: 'https://youtu.be/UvANWG6cQi8',
     image: null,
     creator: {
-      name: 'Comedy Club TV',
+      name: 'U Funny',
       avatar: null,
       verified: true,
     },
-    duration: '5:32',
+    duration: '10:00',
     isLive: false,
   },
   {
     id: 'static-2',
-    title: 'Can you top this?',
-    subtitle: 'Community Challenge',
-    description: 'Think you can do better? Submit your take on this classic setup...',
-    likes: '2.4K',
-    comments: '182',
-    views: '8.1K',
+    title: 'Stand-Up Comedy That Hits Different',
+    subtitle: 'Featured Performance',
+    description: 'Comedy sets that will have you crying laughing.',
+    likes: '8.7K',
+    comments: '543',
+    views: '32.1K',
     featured: false,
-    youtubeId: null,
-    youtubeUrl: null,
-    image: canYouTopThisImage,
+    youtubeId: '43O5Y6KXu0E',
+    youtubeUrl: 'https://youtu.be/43O5Y6KXu0E',
+    image: null,
     creator: {
-      name: 'U Funny Team',
+      name: 'U Funny',
       avatar: null,
       verified: true,
     },
-    duration: '2:15',
+    duration: '8:00',
+    isLive: false,
+  },
+  {
+    id: 'static-3',
+    title: 'Raw Open Mic Moments',
+    subtitle: 'Featured Performance',
+    description: 'Real comics, real laughs, real open mic energy.',
+    likes: '5.2K',
+    comments: '312',
+    views: '18.4K',
+    featured: false,
+    youtubeId: 'k6WNXMLTB5o',
+    youtubeUrl: 'https://youtu.be/k6WNXMLTB5o',
+    image: null,
+    creator: {
+      name: 'U Funny',
+      avatar: null,
+      verified: true,
+    },
+    duration: '7:00',
+    isLive: false,
+  },
+  {
+    id: 'static-4',
+    title: 'Comedy Gold You Missed',
+    subtitle: 'Featured Performance',
+    description: 'Underrated sets that deserve way more views.',
+    likes: '3.9K',
+    comments: '227',
+    views: '14.6K',
+    featured: false,
+    youtubeId: 'ZplWTxVPH34',
+    youtubeUrl: 'https://youtu.be/ZplWTxVPH34',
+    image: null,
+    creator: {
+      name: 'U Funny',
+      avatar: null,
+      verified: true,
+    },
+    duration: '6:00',
     isLive: false,
   },
 ];
@@ -344,6 +384,8 @@ export default function HomeScreen({ navigation }: any) {
     visible: false,
     videoId: null,
   });
+  const feedScrollRef = useRef<ScrollView>(null);
+  const upcomingSectionY = useRef(0);
 
   const fetchCommunityVideos = useCallback(async () => {
     try {
@@ -423,25 +465,34 @@ export default function HomeScreen({ navigation }: any) {
     fetchCommunityVideos();
   }, [fetchCommunityVideos]);
 
-  // Fetch user profile for initial
-  useEffect(() => {
-    const fetchUserProfile = async () => {
-      if (!user) return;
+  // Fetch user profile for initial — refetch every time screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      const fetchUserProfile = async () => {
+        if (!user) return;
 
-      const { data } = await supabase
-        .from('profiles')
-        .select('display_name, stage_name')
-        .eq('id', user.id)
-        .single();
+        const { data } = await supabase
+          .from('profiles')
+          .select('display_name, stage_name')
+          .eq('id', user.id)
+          .single();
 
-      if (data) {
-        const name = data.stage_name || data.display_name || user.email || '?';
-        setUserInitial(name[0]?.toUpperCase() || '?');
-      }
-    };
+        if (data && (data.stage_name || data.display_name)) {
+          const name = data.stage_name || data.display_name;
+          setUserInitial(name![0]?.toUpperCase() || '?');
+        } else {
+          // Fallback to email or auth metadata
+          const fallback =
+            user.user_metadata?.display_name ||
+            user.email ||
+            '?';
+          setUserInitial(fallback[0]?.toUpperCase() || '?');
+        }
+      };
 
-    fetchUserProfile();
-  }, [user]);
+      fetchUserProfile();
+    }, [user])
+  );
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -518,19 +569,34 @@ export default function HomeScreen({ navigation }: any) {
       {/* Category Pills */}
       <View style={styles.categoryContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
-          <TouchableOpacity style={[styles.categoryPill, styles.categoryPillActive]}>
+          <TouchableOpacity
+            style={[styles.categoryPill, styles.categoryPillActive]}
+            onPress={() => feedScrollRef.current?.scrollTo({ y: 0, animated: true })}
+          >
             <Text style={[styles.categoryText, styles.categoryTextActive]}>For You</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.categoryPill}>
+          <TouchableOpacity
+            style={styles.categoryPill}
+            onPress={() => feedScrollRef.current?.scrollTo({ y: upcomingSectionY.current, animated: true })}
+          >
             <Text style={styles.categoryText}>Trending</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.categoryPill}>
+          <TouchableOpacity
+            style={styles.categoryPill}
+            onPress={() => navigation.navigate('OpenMicFinder')}
+          >
             <Text style={styles.categoryText}>Open Mics</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.categoryPill}>
+          <TouchableOpacity
+            style={styles.categoryPill}
+            onPress={() => Linking.openURL('https://www.instagram.com/ufunny.app/')}
+          >
             <Text style={styles.categoryText}>Challenges</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.categoryPill}>
+          <TouchableOpacity
+            style={styles.categoryPill}
+            onPress={() => navigation.navigate('Connections', { type: 'jokers' })}
+          >
             <Text style={styles.categoryText}>Jokers</Text>
           </TouchableOpacity>
         </ScrollView>
@@ -538,6 +604,7 @@ export default function HomeScreen({ navigation }: any) {
 
       {/* Feed */}
       <ScrollView
+        ref={feedScrollRef}
         style={styles.feed}
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -614,7 +681,10 @@ export default function HomeScreen({ navigation }: any) {
         )}
 
         {/* Up & Coming Section Header */}
-        <View style={styles.upcomingSection}>
+        <View
+          style={styles.upcomingSection}
+          onLayout={(e) => { upcomingSectionY.current = e.nativeEvent.layout.y; }}
+        >
           <View style={styles.sectionHeader}>
             <View style={styles.sectionTitleRow}>
               <Image source={smileyIcon} style={styles.smileyIcon} resizeMode="contain" />

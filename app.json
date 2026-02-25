@@ -10,7 +10,7 @@
     "splash": {
       "image": "./assets/logo.png",
       "resizeMode": "contain",
-      "backgroundColor": "#1a1a2e"
+      "backgroundColor": "#f5f1e8"
     },
     "ios": {
       "supportsTablet": true,
@@ -29,7 +29,12 @@
       "package": "com.ufunny.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/logo.png",
-        "backgroundColor": "#1a1a2e"
+        "backgroundColor": "#f5f1e8"
+      },
+      "splash": {
+        "image": "./assets/logo.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#f5f1e8"
       },
       "permissions": [
         "ACCESS_COARSE_LOCATION",

@@ -182,11 +182,37 @@ export default function ShareSetScreen() {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['videos'],
         allowsEditing: true,
-        quality: 1,
+        quality: 0.7,
+        videoMaxDuration: 180,
       });
 
       if (!result.canceled && result.assets[0]) {
         const video = result.assets[0];
+
+        // Check video duration (limit to 3 minutes)
+        if (video.duration && video.duration > 180000) {
+          Alert.alert(
+            'Video Too Long',
+            'Phone uploads are limited to 3 minutes. For longer sets, upload to YouTube first and paste the link.',
+            [{ text: 'Got it' }]
+          );
+          return;
+        }
+
+        // Check file size (limit to 50MB for Supabase storage)
+        try {
+          const fileInfo = await FileSystem.getInfoAsync(video.uri, { size: true });
+          if (fileInfo.exists && 'size' in fileInfo && fileInfo.size && fileInfo.size > 50 * 1024 * 1024) {
+            Alert.alert(
+              'Video Too Large',
+              'Phone uploads are limited to 50MB. Try a shorter clip, or upload to YouTube first and paste the link.',
+              [{ text: 'Got it' }]
+            );
+            return;
+          }
+        } catch {
+          // If we can't check size, proceed and let Supabase handle it
+        }
 
         // Generate thumbnail from video
         let thumbnailUri = video.uri;

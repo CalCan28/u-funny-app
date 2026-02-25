@@ -44,7 +44,7 @@ export default function AuthScreen() {
     }
 
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email: email.trim(),
       password,
     });
@@ -52,6 +52,24 @@ export default function AuthScreen() {
 
     if (error) {
       Alert.alert('Login Failed', error.message);
+      return;
+    }
+
+    // Ensure profile exists (for accounts created before profile upsert was added)
+    if (data.user) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', data.user.id)
+        .single();
+
+      if (!profile) {
+        await supabase.from('profiles').upsert({
+          id: data.user.id,
+          display_name: data.user.user_metadata?.display_name || email.split('@')[0],
+          updated_at: new Date().toISOString(),
+        });
+      }
     }
     // Navigation handled by auth state listener in App.tsx
   };
