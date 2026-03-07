@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Community Guidelines – U Funny</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg:        #f5f1e8;
+      --card-bg:   #fdfcfa;
+      --green:     #6b8e6f;
+      --green-dk:  #556f59;
+      --gold:      #e8b944;
+      --text-dark: #5c4a3a;
+      --text-muted:#9b8b7a;
+      --nav-dark:  #3d3126;
+      --border:    #d9d1c3;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text-dark);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      line-height: 1.7;
+    }
+
+    /* NAV */
+    nav {
+      background: var(--nav-dark);
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+    }
+    .nav-logo img { height: 52px; }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+    .nav-links a {
+      color: rgba(255,255,255,0.7);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 600;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: #fff; }
+    .nav-links a.active { color: var(--gold); }
+    .nav-cta {
+      background: var(--green);
+      color: #fff !important;
+      padding: 10px 22px;
+      border-radius: 999px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 15px;
+      transition: background 0.2s;
+    }
+    .nav-cta:hover { background: var(--green-dk); }
+
+    /* MOBILE NAV */
+    .nav-toggle { display: none; background: none; border: none; cursor: pointer; padding: 8px; }
+    .nav-toggle span { display: block; width: 22px; height: 2px; background: #fff; margin: 5px 0; transition: 0.3s; }
+    @media (max-width: 768px) {
+      .nav-toggle { display: block; }
+      .nav-links {
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: var(--nav-dark);
+        flex-direction: column;
+        padding: 16px 32px 24px;
+        gap: 16px;
+        border-top: 1px solid rgba(255,255,255,0.1);
+      }
+      .nav-links.open { display: flex; }
+    }
+
+    /* CONTENT */
+    .page-header {
+      background: var(--nav-dark);
+      color: #fff;
+      padding: 56px 24px 48px;
+      text-align: center;
+    }
+    .page-header h1 {
+      font-size: clamp(28px, 5vw, 44px);
+      font-weight: 800;
+      margin-bottom: 12px;
+    }
+    .page-header p { color: rgba(255,255,255,0.7); font-size: 16px; }
+
+    .content {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 56px 24px 80px;
+    }
+
+    .section {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 32px;
+      margin-bottom: 24px;
+      border: 1px solid var(--border);
+    }
+
+    .section h2 {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text-dark);
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid var(--border);
+    }
+
+    .section h2 span {
+      color: var(--green);
+      margin-right: 8px;
+    }
+
+    .section h3 {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text-dark);
+      margin-top: 20px;
+      margin-bottom: 10px;
+    }
+
+    .section p {
+      color: var(--text-dark);
+      margin-bottom: 12px;
+      font-size: 15px;
+    }
+
+    .section p:last-child { margin-bottom: 0; }
+
+    .section ul {
+      list-style: none;
+      padding: 0;
+      margin-top: 8px;
+    }
+
+    .section ul li {
+      padding: 6px 0 6px 20px;
+      position: relative;
+      font-size: 15px;
+      color: var(--text-dark);
+    }
+
+    .section ul li::before {
+      content: '\2022';
+      position: absolute;
+      left: 0;
+      color: var(--green);
+      font-weight: 700;
+    }
+
+    .highlight-box {
+      background: #eef4ef;
+      border-left: 4px solid var(--green);
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin-top: 16px;
+      font-size: 15px;
+      color: var(--text-dark);
+    }
+
+    .warning-box {
+      background: #fef9ec;
+      border-left: 4px solid var(--gold);
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin-top: 16px;
+      font-size: 15px;
+      color: var(--text-dark);
+    }
+
+    .zero-tolerance-box {
+      background: #fdecea;
+      border-left: 4px solid #d9534f;
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin-top: 16px;
+      font-size: 15px;
+      color: var(--text-dark);
+      font-weight: 600;
+    }
+
+    .enforcement-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 16px;
+      font-size: 14px;
+    }
+    .enforcement-table th {
+      background: var(--bg);
+      text-align: left;
+      padding: 12px 16px;
+      font-weight: 700;
+      color: var(--text-dark);
+      border-bottom: 2px solid var(--border);
+    }
+    .enforcement-table td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-dark);
+    }
+    .enforcement-table tr:last-child td { border-bottom: none; }
+
+    .contact-box {
+      background: var(--nav-dark);
+      border-radius: 16px;
+      padding: 32px;
+      text-align: center;
+      color: #fff;
+      margin-top: 32px;
+    }
+    .contact-box h3 {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .contact-box p { color: rgba(255,255,255,0.75); margin-bottom: 16px; }
+    .contact-box a {
+      color: var(--gold);
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .contact-box a:hover { text-decoration: underline; }
+
+    /* FOOTER */
+    footer {
+      background: var(--nav-dark);
+      color: rgba(255,255,255,0.6);
+      text-align: center;
+      padding: 32px 24px;
+      font-size: 14px;
+    }
+    footer img { height: 40px; margin-bottom: 12px; display: block; margin-left: auto; margin-right: auto; }
+    footer a { color: rgba(255,255,255,0.6); text-decoration: none; margin: 0 12px; }
+    footer a:hover { color: #fff; }
+    .footer-links { margin: 12px 0 16px; }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav>
+    <a href="/" class="nav-logo">
+      <img src="assets/logo.png" alt="U Funny" />
+    </a>
+    <button class="nav-toggle" onclick="document.querySelector('.nav-links').classList.toggle('open')" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="nav-links">
+      <a href="/">Home</a>
+      <a href="/terms">Terms of Service</a>
+      <a href="/privacy">Privacy Policy</a>
+      <a href="/guidelines" class="active">Community Guidelines</a>
+      <a href="/#waitlist" class="nav-cta">Join Waitlist</a>
+    </div>
+  </nav>
+
+  <!-- HEADER -->
+  <div class="page-header">
+    <h1>Community Guidelines</h1>
+    <p>Keeping U Funny safe, supportive, and genuinely funny</p>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="content">
+
+    <div class="section">
+      <h2><span>1.</span> Our Mission</h2>
+      <p>U Funny is built for comedians, by people who love comedy. Our goal is to create a space where comics can share their work, get honest feedback, grow their skills, and support each other.</p>
+      <p>These Community Guidelines exist to make sure U Funny stays a place where everyone feels safe to be creative. They apply to all content shared on U Funny -- including videos, reviews, feedback, profile information, and any other user-generated content.</p>
+
+      <div class="zero-tolerance-box">
+        U Funny has a zero-tolerance policy for objectionable content and abusive users. Violations will result in content removal and may lead to immediate account suspension or permanent termination.
+      </div>
+    </div>
+
+    <div class="section">
+      <h2><span>2.</span> What's Not Allowed</h2>
+
+      <h3>Hate Speech &amp; Discrimination</h3>
+      <p>Content that attacks, demeans, or dehumanizes individuals or groups based on race, ethnicity, national origin, religion, gender, gender identity, sexual orientation, disability, or immigration status is strictly prohibited.</p>
+
+      <h3>Harassment &amp; Bullying</h3>
+      <p>Do not target individuals with repeated unwanted contact, threats, intimidation, or personal attacks. Constructive comedy feedback is encouraged; personal attacks are not.</p>
+
+      <h3>Threats &amp; Violence</h3>
+      <p>Content that threatens or promotes violence against any individual or group is not allowed. This includes threats of physical harm, encouraging self-harm, and glorifying violent acts.</p>
+
+      <h3>Sexually Explicit Content</h3>
+      <p>Pornographic or sexually explicit material is not permitted. Comedy that touches on adult themes is different from explicit content -- use good judgment.</p>
+
+      <h3>Exploitation of Minors</h3>
+      <p>Any content that exploits, endangers, or sexualizes minors is absolutely prohibited and will be reported to law enforcement.</p>
+
+      <h3>Doxxing &amp; Privacy Violations</h3>
+      <p>Sharing someone's personal information (real name, address, phone number, workplace) without their consent is prohibited.</p>
+
+      <h3>Impersonation</h3>
+      <p>Do not impersonate other comedians, public figures, or U Funny staff. Parody accounts must be clearly labeled as such.</p>
+
+      <h3>Spam &amp; Scams</h3>
+      <p>Automated posting, deceptive links, promotional spam, and scam content are not allowed.</p>
+
+      <h3>Illegal Activity</h3>
+      <p>Content that promotes or facilitates illegal activities, including drug trafficking, fraud, or piracy, is prohibited.</p>
+
+      <h3>Copyright Infringement</h3>
+      <p>Only share content you created or have permission to use. Do not upload other comedians' sets, copyrighted music, or stolen material.</p>
+    </div>
+
+    <div class="section">
+      <h2><span>3.</span> Giving Feedback &amp; Reviews</h2>
+      <p>Set reviews and feedback are a core part of U Funny. Great feedback helps comedians grow. Here's how to keep it constructive:</p>
+      <ul>
+        <li><strong>Be specific:</strong> "Your crowd work transition at 2:30 was strong" is better than "this was bad"</li>
+        <li><strong>Be honest but respectful:</strong> You can critique a set without attacking the person</li>
+        <li><strong>Focus on the craft:</strong> Comment on timing, material, delivery, stage presence -- not personal characteristics</li>
+        <li><strong>No personal attacks:</strong> Feedback that targets a person's identity rather than their performance is harassment, not critique</li>
+      </ul>
+
+      <div class="highlight-box">
+        Good feedback makes comics better. Personal attacks get accounts banned. Know the difference.
+      </div>
+    </div>
+
+    <div class="section">
+      <h2><span>4.</span> How to Report Content</h2>
+      <p>If you see content that violates these guidelines, please report it immediately:</p>
+      <ul>
+        <li><strong>On a video or clip:</strong> Tap the flag icon in the header to report the content</li>
+        <li><strong>On a user profile:</strong> Tap the three-dot menu and select "Report User"</li>
+        <li><strong>On a review or feedback:</strong> Tap and hold the review to access the report option</li>
+        <li><strong>Via email:</strong> Contact <a href="mailto:team@ufunny.app" style="color: var(--green); font-weight: 600;">team@ufunny.app</a> with details</li>
+      </ul>
+      <p style="margin-top: 12px;">All reports are confidential. We do not share reporter information with the reported user.</p>
+      <p><strong>We review all reports within 24 hours</strong> and will take appropriate action based on the severity of the violation.</p>
+    </div>
+
+    <div class="section">
+      <h2><span>5.</span> How to Block a User</h2>
+      <p>If you want to stop seeing content from a specific user:</p>
+      <ul>
+        <li>Go to their profile and tap the three-dot menu</li>
+        <li>Select "Block User"</li>
+        <li>Their content will be immediately removed from your feed</li>
+        <li>They will not be able to see your content or interact with you</li>
+        <li>You can unblock users at any time from Settings</li>
+      </ul>
+      <p style="margin-top: 12px;">When you block a user, our moderation team is also notified so we can review the situation and take action if needed.</p>
+    </div>
+
+    <div class="section">
+      <h2><span>6.</span> Enforcement Actions</h2>
+      <p>We take violations seriously. Here's what happens when guidelines are broken:</p>
+
+      <table class="enforcement-table">
+        <thead>
+          <tr>
+            <th>Violation Level</th>
+            <th>Action Taken</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Minor</strong> (e.g., borderline language, mild spam)</td>
+            <td>Content removed, warning issued</td>
+          </tr>
+          <tr>
+            <td><strong>Moderate</strong> (e.g., harassment, hate speech, repeated minor violations)</td>
+            <td>Content removed, temporary account suspension (7-30 days)</td>
+          </tr>
+          <tr>
+            <td><strong>Severe</strong> (e.g., threats, exploitation, illegal activity)</td>
+            <td>Content removed, permanent account termination, reported to law enforcement</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="warning-box">
+        <strong>Appeals:</strong> If you believe your content was removed or your account was actioned in error, you can appeal by emailing <a href="mailto:team@ufunny.app" style="color: var(--text-dark); font-weight: 600;">team@ufunny.app</a> with your username and a description of the situation. We will review all appeals within 7 business days.
+      </div>
+    </div>
+
+    <div class="section">
+      <h2><span>7.</span> Our Commitment</h2>
+      <p>We are committed to:</p>
+      <ul>
+        <li>Reviewing all user reports promptly (within 24 hours)</li>
+        <li>Applying our guidelines consistently and fairly</li>
+        <li>Being transparent about enforcement actions</li>
+        <li>Continuously improving our content moderation systems</li>
+        <li>Listening to community feedback about these guidelines</li>
+      </ul>
+
+      <div class="highlight-box">
+        These guidelines may be updated from time to time. We will notify users of significant changes through the app. The most current version will always be available at this page.
+      </div>
+    </div>
+
+    <div class="contact-box">
+      <h3>Questions About Our Guidelines?</h3>
+      <p>We want to get this right. If something is unclear or you have suggestions, let us know.</p>
+      <a href="mailto:team@ufunny.app">team@ufunny.app</a>
+    </div>
+
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    <img src="assets/logo.png" alt="U Funny" />
+    <div class="footer-links">
+      <a href="/">Home</a>
+      <a href="/terms">Terms of Service</a>
+      <a href="/privacy">Privacy Policy</a>
+      <a href="/guidelines">Community Guidelines</a>
+    </div>
+    <p>&copy; 2026 Run Horse Run LLC. All rights reserved.</p>
+  </footer>
+
+</body>
+</html>

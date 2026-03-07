@@ -44,9 +44,23 @@
       text-decoration: none;
     }
     .nav-logo img { height: 52px; }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+    .nav-links a {
+      color: rgba(255,255,255,0.7);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 600;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: #fff; }
+    .nav-links a.active { color: var(--gold); }
     .nav-cta {
       background: var(--green);
-      color: #fff;
+      color: #fff !important;
       padding: 10px 22px;
       border-radius: 999px;
       text-decoration: none;
@@ -55,6 +69,26 @@
       transition: background 0.2s;
     }
     .nav-cta:hover { background: var(--green-dk); }
+
+    /* MOBILE NAV */
+    .nav-toggle { display: none; background: none; border: none; cursor: pointer; padding: 8px; }
+    .nav-toggle span { display: block; width: 22px; height: 2px; background: #fff; margin: 5px 0; transition: 0.3s; }
+    @media (max-width: 768px) {
+      .nav-toggle { display: block; }
+      .nav-links {
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: var(--nav-dark);
+        flex-direction: column;
+        padding: 16px 32px 24px;
+        gap: 16px;
+        border-top: 1px solid rgba(255,255,255,0.1);
+      }
+      .nav-links.open { display: flex; }
+    }
 
     /* CONTENT */
     .page-header {
@@ -68,10 +102,7 @@
       font-weight: 800;
       margin-bottom: 12px;
     }
-    .page-header p {
-      color: rgba(255,255,255,0.7);
-      font-size: 16px;
-    }
+    .page-header p { color: rgba(255,255,255,0.7); font-size: 16px; }
 
     .content {
       max-width: 760px;
@@ -123,7 +154,7 @@
     }
 
     .section ul li::before {
-      content: '•';
+      content: '\2022';
       position: absolute;
       left: 0;
       color: var(--green);
@@ -182,26 +213,35 @@
     <a href="/" class="nav-logo">
       <img src="assets/logo.png" alt="U Funny" />
     </a>
-    <a href="/#waitlist" class="nav-cta">Join Waitlist</a>
+    <button class="nav-toggle" onclick="document.querySelector('.nav-links').classList.toggle('open')" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="nav-links">
+      <a href="/">Home</a>
+      <a href="/terms">Terms of Service</a>
+      <a href="/privacy" class="active">Privacy Policy</a>
+      <a href="/guidelines">Community Guidelines</a>
+      <a href="/#waitlist" class="nav-cta">Join Waitlist</a>
+    </div>
   </nav>
 
   <!-- HEADER -->
   <div class="page-header">
     <h1>Privacy Policy</h1>
-    <p>Last updated: February 2026</p>
+    <p>Last updated: March 2026</p>
   </div>
 
   <!-- CONTENT -->
   <div class="content">
 
     <div class="section">
-      <h2><span>👋</span>Introduction</h2>
-      <p>Welcome to U Funny ("we," "our," or "us"). We built U Funny to help stand-up comedians track their journey, improve their craft, and connect with other comics.</p>
+      <h2><span>1.</span> Introduction</h2>
+      <p>Welcome to U Funny ("we," "our," or "us"), operated by Run Horse Run LLC. We built U Funny to help stand-up comedians track their journey, improve their craft, and connect with other comics.</p>
       <p>This Privacy Policy explains what information we collect, how we use it, and the choices you have. By using U Funny, you agree to the practices described here.</p>
     </div>
 
     <div class="section">
-      <h2><span>📋</span>Information We Collect</h2>
+      <h2><span>2.</span> Information We Collect</h2>
       <p><strong>Information you provide directly:</strong></p>
       <ul>
         <li>Email address and password (for your account)</li>
@@ -209,8 +249,9 @@
         <li>Profile photo</li>
         <li>Comedy bits, set lists, and notes you create</li>
         <li>Check-in activity at open mics and venues</li>
-        <li>Video clips you upload</li>
-        <li>Critiques and feedback you give or receive</li>
+        <li>Video clips you upload or YouTube links you share</li>
+        <li>Critiques, reviews, and feedback you give or receive</li>
+        <li>Reports you submit about other users or content</li>
         <li>Messages and interactions with other users</li>
       </ul>
       <p style="margin-top:16px;"><strong>Information collected automatically:</strong></p>
@@ -223,7 +264,7 @@
     </div>
 
     <div class="section">
-      <h2><span>🔧</span>How We Use Your Information</h2>
+      <h2><span>3.</span> How We Use Your Information</h2>
       <p>We use your information to:</p>
       <ul>
         <li>Provide and improve the U Funny app and its features</li>
@@ -231,6 +272,8 @@
         <li>Enable connections between comedians and audience members</li>
         <li>Send important account and service notifications</li>
         <li>Respond to your support requests</li>
+        <li><strong>Moderate content and enforce our Community Guidelines and Terms of Service</strong></li>
+        <li><strong>Review user reports, investigate policy violations, and take appropriate action including content removal and account suspension</strong></li>
         <li>Ensure the safety and security of our platform</li>
         <li>Comply with legal obligations</li>
       </ul>
@@ -240,30 +283,45 @@
     </div>
 
     <div class="section">
-      <h2><span>🤝</span>Information We Share</h2>
+      <h2><span>4.</span> Content Moderation &amp; Safety</h2>
+      <p>To maintain a safe community, we may review, filter, or remove user-generated content that violates our <a href="/terms" style="color: var(--green); font-weight: 600;">Terms of Service</a> or <a href="/guidelines" style="color: var(--green); font-weight: 600;">Community Guidelines</a>.</p>
+      <p>This includes:</p>
+      <ul>
+        <li>Automated content filtering to detect objectionable material</li>
+        <li>Reviewing user reports of objectionable content or abusive behavior</li>
+        <li>Monitoring patterns of reported or blocked users</li>
+        <li>Taking enforcement actions including content removal, account suspension, or permanent termination</li>
+      </ul>
+      <p>When you report or block a user, this information is shared with our moderation team for review. We do not share report details with the reported user.</p>
+    </div>
+
+    <div class="section">
+      <h2><span>5.</span> Information We Share</h2>
       <p>We only share your information in limited circumstances:</p>
       <ul>
         <li><strong>With other users:</strong> Your display name, profile, and public activity (like check-ins or shared sets) are visible to other U Funny users based on your privacy settings</li>
-        <li><strong>Service providers:</strong> We use Supabase for secure data storage and authentication, and OpenAI to power the AI Comedy Coach feature</li>
+        <li><strong>Service providers:</strong> We use Supabase for secure data storage and authentication, and AI providers to power the AI Comedy Coach feature</li>
         <li><strong>Legal requirements:</strong> If required by law or to protect the safety of our users</li>
+        <li><strong>Law enforcement:</strong> We may share information with authorities when we become aware of content that violates the law or poses a threat to safety</li>
         <li><strong>Business transfers:</strong> If U Funny is acquired or merged, your data may transfer to the new owner under the same privacy protections</li>
       </ul>
     </div>
 
     <div class="section">
-      <h2><span>📍</span>Location Data</h2>
-      <p>U Funny may request access to your device's location to help you find nearby open mics and venues. Location access is always optional — you can use the app without granting it.</p>
+      <h2><span>6.</span> Location Data</h2>
+      <p>U Funny may request access to your device's location to help you find nearby open mics and venues. Location access is always optional -- you can use the app without granting it.</p>
       <p>We do not track your location in the background. Location is only accessed when you are actively using the open mic finder feature.</p>
     </div>
 
     <div class="section">
-      <h2><span>🎥</span>Videos and Media</h2>
+      <h2><span>7.</span> Videos and Media</h2>
       <p>Videos and clips you upload are stored securely in our cloud infrastructure. You own your content. We do not use your videos for any purpose other than displaying them within the app as you intend.</p>
+      <p>We may review uploaded media as part of our content moderation process to ensure compliance with our Terms of Service and Community Guidelines.</p>
       <p>You can delete your uploaded clips at any time from within the app.</p>
     </div>
 
     <div class="section">
-      <h2><span>🔒</span>Data Security</h2>
+      <h2><span>8.</span> Data Security</h2>
       <p>We take security seriously. Your data is protected by:</p>
       <ul>
         <li>Encrypted connections (HTTPS/TLS) for all data in transit</li>
@@ -275,7 +333,7 @@
     </div>
 
     <div class="section">
-      <h2><span>👤</span>Your Rights and Choices</h2>
+      <h2><span>9.</span> Your Rights and Choices</h2>
       <p>You have the right to:</p>
       <ul>
         <li><strong>Access</strong> the personal information we hold about you</li>
@@ -283,18 +341,20 @@
         <li><strong>Delete</strong> your account and associated data</li>
         <li><strong>Export</strong> your comedy bits and set data</li>
         <li><strong>Opt out</strong> of non-essential communications</li>
+        <li><strong>Block</strong> other users to prevent them from seeing your content or interacting with you</li>
+        <li><strong>Report</strong> content or users that violate our guidelines</li>
       </ul>
-      <p style="margin-top:12px;">To delete your account, go to <strong>Settings → Account → Delete Account</strong> in the app, or email us at the address below.</p>
+      <p style="margin-top:12px;">To delete your account, go to <strong>Settings &gt; Account &gt; Delete Account</strong> in the app, or email us at the address below.</p>
     </div>
 
     <div class="section">
-      <h2><span>👶</span>Children's Privacy</h2>
+      <h2><span>10.</span> Children's Privacy</h2>
       <p>U Funny is intended for users 13 years of age and older. We do not knowingly collect personal information from children under 13. If we become aware that a child under 13 has provided us with personal information, we will delete it promptly.</p>
       <p>If you believe a child under 13 has created an account, please contact us immediately.</p>
     </div>
 
     <div class="section">
-      <h2><span>🔄</span>Changes to This Policy</h2>
+      <h2><span>11.</span> Changes to This Policy</h2>
       <p>We may update this Privacy Policy from time to time. When we make significant changes, we will notify you through the app or by email. The "Last updated" date at the top of this page will always reflect the most recent version.</p>
       <p>Continued use of U Funny after changes are posted means you accept the updated policy.</p>
     </div>
@@ -312,10 +372,11 @@
     <img src="assets/logo.png" alt="U Funny" />
     <div class="footer-links">
       <a href="/">Home</a>
-      <a href="/privacy.html">Privacy Policy</a>
-      <a href="/terms.html">Terms of Service</a>
+      <a href="/terms">Terms of Service</a>
+      <a href="/privacy">Privacy Policy</a>
+      <a href="/guidelines">Community Guidelines</a>
     </div>
-    <p>&copy; 2026 U Funny. All rights reserved.</p>
+    <p>&copy; 2026 Run Horse Run LLC. All rights reserved.</p>
   </footer>
 
 </body>
