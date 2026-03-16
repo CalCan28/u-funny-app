@@ -425,38 +425,84 @@ export default function OpenMicFinderScreen({ navigation }: any) {
   };
   const [locationDenied, setLocationDenied] = useState(false);
 
-  // Fetch open mics from Supabase
+  // Fetch open mics from Supabase (both open_mics table AND host-created events)
   const fetchOpenMics = async (userLocation?: Location.LocationObject) => {
     setLoadingMics(true);
     const today = new Date().toISOString().split('T')[0];
-    const { data, error } = await supabase
+
+    // Fetch from open_mics table
+    const { data: openMicData, error: openMicError } = await supabase
       .from('open_mics')
       .select('*');
 
-    if (!error && data) {
-      const mics: OpenMic[] = data.map((mic: any) => ({
-        ...mic,
-        distance:
-          userLocation && mic.latitude && mic.longitude
-            ? getDistanceMiles(
-                userLocation.coords.latitude,
-                userLocation.coords.longitude,
-                mic.latitude,
-                mic.longitude
-              )
-            : undefined,
-      }));
+    // Fetch from events table (host-created events that are active and today or future)
+    const { data: hostEventData, error: hostEventError } = await supabase
+      .from('events')
+      .select('*')
+      .eq('is_active', true)
+      .gte('event_date', today);
 
-      // Sort: recurring mics by days until next occurrence, one-time events by date
-      mics.sort((a, b) => {
-        const aDays = a.day_of_week ? daysUntilNext(a.day_of_week) : 0;
-        const bDays = b.day_of_week ? daysUntilNext(b.day_of_week) : 0;
-        if (aDays !== bDays) return aDays - bDays;
-        return (a.event_time || '').localeCompare(b.event_time || '');
-      });
+    const mics: OpenMic[] = [];
 
-      setOpenMics(mics);
+    // Add open_mics entries
+    if (!openMicError && openMicData) {
+      for (const mic of openMicData) {
+        mics.push({
+          ...mic,
+          distance:
+            userLocation && mic.latitude && mic.longitude
+              ? getDistanceMiles(
+                  userLocation.coords.latitude,
+                  userLocation.coords.longitude,
+                  mic.latitude,
+                  mic.longitude
+                )
+              : undefined,
+        });
+      }
     }
+
+    // Add host-created events (convert to OpenMic format)
+    if (!hostEventError && hostEventData) {
+      for (const event of hostEventData) {
+        // Build full address from parts
+        const fullAddress = [event.address, event.city, event.state]
+          .filter(Boolean)
+          .join(', ');
+
+        mics.push({
+          id: `host_${event.id}`,
+          name: event.venue_name || 'Open Mic Event',
+          address: fullAddress,
+          latitude: event.latitude || null,
+          longitude: event.longitude || null,
+          event_date: event.event_date,
+          event_time: event.event_time || 'Check with host',
+          spots_left: 0,
+          day_of_week: null,
+          sign_up_notes: event.description || 'Community event — hosted on U Funny',
+          distance:
+            userLocation && event.latitude && event.longitude
+              ? getDistanceMiles(
+                  userLocation.coords.latitude,
+                  userLocation.coords.longitude,
+                  event.latitude,
+                  event.longitude
+                )
+              : undefined,
+        });
+      }
+    }
+
+    // Sort: recurring mics by days until next occurrence, one-time events by date
+    mics.sort((a, b) => {
+      const aDays = a.day_of_week ? daysUntilNext(a.day_of_week) : 0;
+      const bDays = b.day_of_week ? daysUntilNext(b.day_of_week) : 0;
+      if (aDays !== bDays) return aDays - bDays;
+      return (a.event_time || '').localeCompare(b.event_time || '');
+    });
+
+    setOpenMics(mics);
     setLoadingMics(false);
   };
 
@@ -860,7 +906,7 @@ export default function OpenMicFinderScreen({ navigation }: any) {
                         ? mic.address
                         : `${mic.event_date ? formatDate(mic.event_date) : mic.day_of_week ? getDayLabel(mic.day_of_week) : ''} at ${mic.event_time}`
                     }
-                    pinColor={mic.id.startsWith('google_') ? colors.accent : colors.primary}
+                    pinColor={mic.id.startsWith('google_') ? colors.accent : mic.id.startsWith('host_') ? '#e85d4c' : colors.primary}
                   />
                 ))}
             </MapView>

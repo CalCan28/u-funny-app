@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -19,6 +19,7 @@ import * as MediaLibrary from 'expo-media-library';
 import * as FileSystem from 'expo-file-system';
 import * as Clipboard from 'expo-clipboard';
 import { supabase } from '../services/supabase';
+import { containsOffensiveContent } from '../services/moderationService';
 
 // Design colors matching the app
 const colors = {
@@ -97,6 +98,17 @@ type SavedEvent = {
   created_at: string;
 };
 
+type OpenMicVenue = {
+  id: string;
+  name: string;
+  address: string;
+  latitude: number | null;
+  longitude: number | null;
+  event_time: string;
+  day_of_week?: string | null;
+  sign_up_notes?: string | null;
+};
+
 export default function HostDashboardScreen({ navigation }: any) {
   const [eventData, setEventData] = useState<EventData>({
     venueName: '',
@@ -119,6 +131,9 @@ export default function HostDashboardScreen({ navigation }: any) {
   const [activeTab, setActiveTab] = useState<'create' | 'manage'>('create');
 
   const qrRef = useRef<any>(null);
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [venueResults, setVenueResults] = useState<OpenMicVenue[]>([]);
+  const [showVenueSuggestions, setShowVenueSuggestions] = useState(false);
 
   // Load saved events on mount
   useEffect(() => {
@@ -141,6 +156,93 @@ export default function HostDashboardScreen({ navigation }: any) {
     } catch (error) {
       // Sentry captures this automatically
     }
+  };
+
+  const searchVenues = useCallback((query: string) => {
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    if (query.length < 2) {
+      setVenueResults([]);
+      setShowVenueSuggestions(false);
+      return;
+    }
+    searchTimeoutRef.current = setTimeout(async () => {
+      try {
+        const { data, error } = await supabase
+          .from('open_mics')
+          .select('id, name, address, latitude, longitude, event_time, day_of_week, sign_up_notes')
+          .ilike('name', `%${query}%`)
+          .limit(5);
+        if (!error && data && data.length > 0) {
+          setVenueResults(data);
+          setShowVenueSuggestions(true);
+        } else {
+          setVenueResults([]);
+          setShowVenueSuggestions(false);
+        }
+      } catch {
+        setVenueResults([]);
+        setShowVenueSuggestions(false);
+      }
+    }, 300);
+  }, []);
+
+  const handleSelectVenue = (venue: OpenMicVenue) => {
+    // Parse city and state from address (format: "123 Main St, Chicago, IL 60601" or similar)
+    let city = '';
+    let state = '';
+    let streetAddress = venue.address;
+
+    const parts = venue.address.split(',').map(p => p.trim());
+    if (parts.length >= 3) {
+      streetAddress = parts[0];
+      city = parts[1];
+      // State might be "IL 60601" — extract just the state abbreviation
+      const stateMatch = parts[2].match(/^([A-Z]{2})/);
+      if (stateMatch) state = stateMatch[1];
+    } else if (parts.length === 2) {
+      streetAddress = parts[0];
+      const stateMatch = parts[1].match(/^([A-Z]{2})/);
+      if (stateMatch) {
+        state = stateMatch[1];
+      } else {
+        city = parts[1];
+      }
+    }
+
+    // Parse event time
+    let eventTime = new Date();
+    if (venue.event_time) {
+      const timeParts = venue.event_time.match(/(\d+):(\d+)/);
+      if (timeParts) {
+        eventTime.setHours(parseInt(timeParts[1]), parseInt(timeParts[2]), 0, 0);
+      }
+    }
+
+    // Build description from day_of_week + sign_up_notes
+    let description = '';
+    if (venue.day_of_week) description += `Every ${venue.day_of_week}`;
+    if (venue.sign_up_notes) {
+      description += description ? '. ' : '';
+      description += venue.sign_up_notes;
+    }
+
+    setEventData(prev => ({
+      ...prev,
+      venueName: venue.name,
+      address: streetAddress,
+      city,
+      state,
+      eventTime,
+      description,
+    }));
+
+    setShowVenueSuggestions(false);
+    setVenueResults([]);
+  };
+
+  const handleVenueNameChange = (text: string) => {
+    setEventData(prev => ({ ...prev, venueName: text }));
+    searchVenues(text);
   };
 
   const validateForm = () => {
@@ -204,7 +306,31 @@ export default function HostDashboardScreen({ navigation }: any) {
         return;
       }
 
-      const eventPayload = {
+      const textToCheck = [eventData.venueName, eventData.description].filter(Boolean).join(' ');
+      if (containsOffensiveContent(textToCheck)) {
+        Alert.alert('Content Not Allowed', 'Your event contains language that violates our Community Guidelines. Please revise.');
+        setIsSaving(false);
+        return;
+      }
+
+      // Geocode the address to get lat/lon for map display
+      let latitude: number | null = null;
+      let longitude: number | null = null;
+      try {
+        const fullAddress = `${eventData.address.trim()}, ${eventData.city.trim()}, ${eventData.state}`;
+        const GOOGLE_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY || 'AIzaSyDdNWpM50n_0AKQKR3qhDaehhoNzZYVQuw';
+        const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(fullAddress)}&key=${GOOGLE_API_KEY}`;
+        const geoResponse = await fetch(geocodeUrl);
+        const geoData = await geoResponse.json();
+        if (geoData.results && geoData.results.length > 0) {
+          latitude = geoData.results[0].geometry.location.lat;
+          longitude = geoData.results[0].geometry.location.lng;
+        }
+      } catch {
+        // Geocoding failed — save without coordinates
+      }
+
+      const eventPayload: Record<string, any> = {
         host_id: user.id,
         venue_name: eventData.venueName.trim(),
         address: eventData.address.trim(),
@@ -216,15 +342,35 @@ export default function HostDashboardScreen({ navigation }: any) {
         description: eventData.description.trim(),
       };
 
-      const { data, error } = await supabase
-        .from('events')
-        .insert(eventPayload)
-        .select()
-        .single();
+      // Add coordinates if geocoding succeeded
+      if (latitude !== null && longitude !== null) {
+        eventPayload.latitude = latitude;
+        eventPayload.longitude = longitude;
+      }
+
+      let data: any;
+      let error: any;
+
+      if (eventData.id) {
+        // Editing an existing event — update it
+        ({ data, error } = await supabase
+          .from('events')
+          .update(eventPayload)
+          .eq('id', eventData.id)
+          .select()
+          .single());
+      } else {
+        // Creating a new event
+        ({ data, error } = await supabase
+          .from('events')
+          .insert(eventPayload)
+          .select()
+          .single());
+      }
 
       if (error) {
         if (error.code === '23505') {
-          // Unique constraint violation - room code exists
+          // Unique constraint violation - active room code already exists
           const newCode = generateRoomCode();
           setEventData(prev => ({ ...prev, roomCode: newCode }));
           Alert.alert('Room Code Taken', 'Generated a new room code. Please try again.');
@@ -346,6 +492,66 @@ export default function HostDashboardScreen({ navigation }: any) {
       description: event.description || '',
     });
     setActiveTab('create');
+  };
+
+  const handleReuseEvent = async (event: SavedEvent) => {
+    Alert.alert(
+      'Start Next Event',
+      `Create a new event at ${event.venue_name} with the same QR code? The previous event will be marked as past.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Start Next Event',
+          onPress: async () => {
+            setIsSaving(true);
+            try {
+              const { data: { user } } = await supabase.auth.getUser();
+              if (!user) {
+                Alert.alert('Error', 'Please sign in');
+                return;
+              }
+
+              // Deactivate old event
+              await supabase
+                .from('events')
+                .update({ is_active: false })
+                .eq('id', event.id);
+
+              // Create new event with same room_code and venue details
+              const today = new Date();
+              const { data, error } = await supabase
+                .from('events')
+                .insert({
+                  host_id: user.id,
+                  venue_name: event.venue_name,
+                  address: event.address,
+                  city: event.city,
+                  state: event.state,
+                  event_date: today.toISOString().split('T')[0],
+                  event_time: event.event_time,
+                  room_code: event.room_code,
+                  description: event.description || '',
+                })
+                .select()
+                .single();
+
+              if (error) throw error;
+
+              // Load the new event into the form and show QR
+              handleLoadEvent(data);
+              loadSavedEvents();
+              setShowQRModal(true);
+
+              Alert.alert('Event Created!', 'New event started with the same QR code. Your old QR still works!');
+            } catch (error: any) {
+              Alert.alert('Error', error.message || 'Failed to create new event');
+            } finally {
+              setIsSaving(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleDeleteEvent = async (eventId: string) => {
@@ -526,8 +732,23 @@ export default function HostDashboardScreen({ navigation }: any) {
                 placeholder="e.g., The Comedy Store"
                 placeholderTextColor={colors.textMuted}
                 value={eventData.venueName}
-                onChangeText={(text) => setEventData(prev => ({ ...prev, venueName: text }))}
+                onChangeText={handleVenueNameChange}
+                onBlur={() => setTimeout(() => setShowVenueSuggestions(false), 200)}
               />
+              {showVenueSuggestions && venueResults.length > 0 && (
+                <View style={styles.suggestionsDropdown}>
+                  {venueResults.map(venue => (
+                    <TouchableOpacity
+                      key={venue.id}
+                      style={styles.suggestionItem}
+                      onPress={() => handleSelectVenue(venue)}
+                    >
+                      <Text style={styles.suggestionName}>{venue.name}</Text>
+                      <Text style={styles.suggestionAddress} numberOfLines={1}>{venue.address}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
             </View>
 
             <View style={styles.inputGroup}>
@@ -716,6 +937,14 @@ export default function HostDashboardScreen({ navigation }: any) {
                     <Text style={styles.eventActionDeleteText}>Delete</Text>
                   </TouchableOpacity>
                 </View>
+                {!event.is_active && (
+                  <TouchableOpacity
+                    style={[styles.eventActionButton, styles.eventActionReuse, { marginTop: 8 }]}
+                    onPress={() => handleReuseEvent(event)}
+                  >
+                    <Text style={styles.eventActionReuseText}>🔄 Start Next Event (Same QR)</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             ))
           )}
@@ -1300,5 +1529,44 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: colors.error,
+  },
+  eventActionReuse: {
+    backgroundColor: 'rgba(107, 142, 111, 0.1)',
+    borderColor: colors.primary,
+  },
+  eventActionReuseText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.primary,
+  },
+  // Venue suggestions dropdown
+  suggestionsDropdown: {
+    backgroundColor: colors.cardBg,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    marginTop: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    zIndex: 10,
+  },
+  suggestionItem: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.cardBorder,
+  },
+  suggestionName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.textDark,
+    marginBottom: 2,
+  },
+  suggestionAddress: {
+    fontSize: 13,
+    color: colors.textMuted,
   },
 });
