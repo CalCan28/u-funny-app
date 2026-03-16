@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Join Event - U Funny</title>
+  <meta name="description" content="Join the open mic lineup on U Funny">
+  <meta property="og:title" content="Join the Lineup - U Funny">
+  <meta property="og:description" content="Scan, join, perform. The comedy open mic app.">
+  <meta property="og:type" content="website">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎤</text></svg>">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: #f5f1e8;
+      color: #5c4a3a;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px;
+    }
+    .container {
+      max-width: 420px;
+      width: 100%;
+    }
+    .logo {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .logo-emoji { font-size: 48px; }
+    .logo-text {
+      font-size: 28px;
+      font-weight: bold;
+      color: #5c4a3a;
+      margin-top: 4px;
+    }
+    .logo-tagline {
+      font-size: 14px;
+      color: #9b8b7a;
+      margin-top: 4px;
+    }
+    .card {
+      background: #fdfcfa;
+      border: 1px solid #d9d1c3;
+      border-radius: 20px;
+      padding: 24px;
+      margin-bottom: 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+    .event-badge {
+      display: inline-block;
+      background: #e8b944;
+      color: #5c4a3a;
+      font-size: 12px;
+      font-weight: bold;
+      padding: 4px 12px;
+      border-radius: 20px;
+      letter-spacing: 0.5px;
+      margin-bottom: 16px;
+    }
+    .venue-name {
+      font-size: 24px;
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+    .venue-address {
+      font-size: 15px;
+      color: #9b8b7a;
+      margin-bottom: 4px;
+    }
+    .venue-location {
+      font-size: 15px;
+      color: #9b8b7a;
+      margin-bottom: 16px;
+    }
+    .detail-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+      font-size: 15px;
+    }
+    .detail-icon { font-size: 18px; }
+    .room-code-section {
+      text-align: center;
+      padding-top: 16px;
+      margin-top: 16px;
+      border-top: 1px solid #d9d1c3;
+    }
+    .room-code-label {
+      font-size: 11px;
+      color: #9b8b7a;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+    }
+    .room-code {
+      font-size: 28px;
+      font-weight: bold;
+      color: #6b8e6f;
+      letter-spacing: 4px;
+    }
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 16px;
+      border: none;
+      border-radius: 14px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      text-align: center;
+      text-decoration: none;
+      margin-bottom: 12px;
+      transition: opacity 0.2s;
+    }
+    .btn:hover { opacity: 0.9; }
+    .btn-primary {
+      background: #6b8e6f;
+      color: #fff;
+    }
+    .btn-store {
+      background: #5c4a3a;
+      color: #fff;
+    }
+    .btn-outline {
+      background: #fdfcfa;
+      color: #5c4a3a;
+      border: 1px solid #d9d1c3;
+    }
+    .store-buttons {
+      display: flex;
+      gap: 10px;
+    }
+    .store-buttons .btn { flex: 1; }
+    .divider {
+      text-align: center;
+      color: #9b8b7a;
+      font-size: 13px;
+      margin: 8px 0;
+    }
+    .footer {
+      text-align: center;
+      font-size: 13px;
+      color: #9b8b7a;
+      margin-top: 24px;
+      line-height: 1.5;
+    }
+    #event-info { display: none; }
+    #no-event-info { display: none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo">
+      <div class="logo-emoji">🎤</div>
+      <div class="logo-text">U Funny</div>
+      <div class="logo-tagline">The Comedy Open Mic App</div>
+    </div>
+
+    <!-- Event info card (shown when URL has event data) -->
+    <div id="event-info" class="card">
+      <div class="event-badge">OPEN MIC</div>
+      <div id="venue-name" class="venue-name"></div>
+      <div id="venue-address" class="venue-address"></div>
+      <div id="venue-location" class="venue-location"></div>
+      <div id="event-details"></div>
+      <div class="room-code-section">
+        <div class="room-code-label">Room Code</div>
+        <div id="room-code" class="room-code"></div>
+      </div>
+    </div>
+
+    <!-- Generic card (shown when no event data in URL) -->
+    <div id="no-event-info" class="card">
+      <div style="text-align: center;">
+        <div style="font-size: 40px; margin-bottom: 12px;">🎭</div>
+        <div class="venue-name" style="margin-bottom: 8px;">Join the Lineup</div>
+        <p style="color: #9b8b7a; font-size: 15px; line-height: 1.5;">
+          Download U Funny to join this open mic event, get in the lineup, and get real feedback on your set.
+        </p>
+      </div>
+    </div>
+
+    <!-- Open in app button -->
+    <a id="open-app-btn" class="btn btn-primary" href="#">
+      Open in U Funny
+    </a>
+
+    <div class="divider">Don't have the app yet?</div>
+
+    <!-- Store download buttons -->
+    <div class="store-buttons">
+      <a class="btn btn-store" href="https://apps.apple.com/app/u-funny/id6759726983" target="_blank">
+        App Store
+      </a>
+      <a class="btn btn-store" href="https://play.google.com/store/apps/details?id=com.ufunny.app" target="_blank">
+        Google Play
+      </a>
+    </div>
+
+    <div class="footer">
+      <p>Scan. Join. Perform.</p>
+      <p style="margin-top: 8px;">
+        <a href="https://ufunny.app/terms" style="color: #6b8e6f; text-decoration: none;">Terms</a>
+        &nbsp;&middot;&nbsp;
+        <a href="https://ufunny.app/privacy" style="color: #6b8e6f; text-decoration: none;">Privacy</a>
+      </p>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      var params = new URLSearchParams(window.location.search);
+      var room = params.get('room');
+      var venue = params.get('venue');
+      var address = params.get('address');
+      var city = params.get('city');
+      var state = params.get('state');
+      var date = params.get('date');
+      var time = params.get('time');
+
+      // Set up deep link
+      if (room) {
+        var deepLink = 'ufunny://join-event?room=' + encodeURIComponent(room);
+        document.getElementById('open-app-btn').href = deepLink;
+      }
+
+      // Show event info if we have venue data
+      if (venue || room) {
+        var eventInfo = document.getElementById('event-info');
+        var noEventInfo = document.getElementById('no-event-info');
+        eventInfo.style.display = 'block';
+        noEventInfo.style.display = 'none';
+
+        if (venue) {
+          document.getElementById('venue-name').textContent = decodeURIComponent(venue);
+        }
+        if (address) {
+          document.getElementById('venue-address').textContent = decodeURIComponent(address);
+        }
+        if (city || state) {
+          var location = '';
+          if (city) location += decodeURIComponent(city);
+          if (city && state) location += ', ';
+          if (state) location += decodeURIComponent(state);
+          document.getElementById('venue-location').textContent = location;
+        }
+
+        var detailsHtml = '';
+        if (date) {
+          try {
+            var d = new Date(date + 'T00:00:00');
+            var formatted = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+            detailsHtml += '<div class="detail-row"><span class="detail-icon">📅</span> ' + formatted + '</div>';
+          } catch(e) {}
+        }
+        if (time) {
+          try {
+            var parts = time.split(':');
+            var t = new Date();
+            t.setHours(parseInt(parts[0]), parseInt(parts[1]));
+            var formattedTime = t.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+            detailsHtml += '<div class="detail-row"><span class="detail-icon">🕐</span> ' + formattedTime + '</div>';
+          } catch(e) {}
+        }
+        document.getElementById('event-details').innerHTML = detailsHtml;
+
+        if (room) {
+          document.getElementById('room-code').textContent = room;
+        }
+      } else {
+        document.getElementById('event-info').style.display = 'none';
+        document.getElementById('no-event-info').style.display = 'block';
+      }
+    })();
+  </script>
+</body>
+</html>
