@@ -412,6 +412,7 @@ export default function OpenMicFinderScreen({ navigation }: any) {
   const [loadingMics, setLoadingMics] = useState(true);
   const [googleMics, setGoogleMics] = useState<OpenMic[]>([]);
   const [loadingGoogle, setLoadingGoogle] = useState(false);
+  const [activeGoogleSearch, setActiveGoogleSearch] = useState(false);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const mapRef = useRef<MapView>(null);
 
@@ -478,6 +479,7 @@ export default function OpenMicFinderScreen({ navigation }: any) {
       });
 
       setGoogleMics(converted);
+      setActiveGoogleSearch(!!query.trim());
 
       // Re-center map if results are in a different area
       if (converted.length > 0 && mapRef.current && query.trim()) {
@@ -544,9 +546,12 @@ export default function OpenMicFinderScreen({ navigation }: any) {
     return [...openMics, ...uniqueGoogleMics];
   })();
 
-  // Filter by search query
+  // Filter by search query — only filter Supabase mics locally
+  // Google results are already filtered by the API, so don't double-filter them
   const filteredMics = mergedMics.filter((mic) => {
     if (!searchQuery.trim()) return true;
+    // Google results are already relevant — don't filter them out
+    if (activeGoogleSearch && mic.id.startsWith('google_')) return true;
     const q = searchQuery.toLowerCase();
     return (
       mic.name.toLowerCase().includes(q) ||
@@ -556,16 +561,21 @@ export default function OpenMicFinderScreen({ navigation }: any) {
 
   // Search Google Places — works with or without GPS location
   const searchGooglePlaces = (query: string) => {
-    if (location) {
-      // Have GPS — search with location bias
+    // Check if the query contains a city/location name
+    // If so, use city-based search (more relevant than GPS bias for distant cities)
+    const looksLikeCitySearch = /[A-Z]/.test(query) || query.length >= 3;
+
+    if (looksLikeCitySearch) {
+      // Always use city-based search when user types a query
+      // This works whether they have GPS or not
+      fetchGoogleMicsByCity(query);
+    } else if (location) {
+      // Short generic query with GPS — search near current location
       fetchGoogleMics(
         query,
         location.coords.latitude,
         location.coords.longitude,
       );
-    } else if (query.trim().length >= 3) {
-      // No GPS — search by city/query name (e.g. "Atlanta", "open mic LA")
-      fetchGoogleMicsByCity(query);
     }
   };
 
@@ -576,6 +586,7 @@ export default function OpenMicFinderScreen({ navigation }: any) {
       const results = await searchOpenMicsByCity(query);
       const converted = results.map((place) => convertGooglePlaceToOpenMic(place));
       setGoogleMics(converted);
+      setActiveGoogleSearch(true);
 
       // Re-center map on results
       if (converted.length > 0 && mapRef.current) {
@@ -601,6 +612,10 @@ export default function OpenMicFinderScreen({ navigation }: any) {
   // Debounced search handler for Google Places
   const handleSearchChange = (text: string) => {
     setSearchQuery(text);
+    if (!text.trim()) {
+      setActiveGoogleSearch(false);
+      setGoogleMics([]);
+    }
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
     }
