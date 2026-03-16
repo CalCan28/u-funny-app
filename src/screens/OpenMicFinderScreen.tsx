@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -15,8 +15,16 @@ import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
 import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
+import * as Linking from 'expo-linking';
 import { supabase } from '../services/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import {
+  searchOpenMics,
+  searchOpenMicsNearby,
+  searchOpenMicsByCity,
+  convertGooglePlaceToOpenMic,
+  normalizeAddress,
+} from '../services/googlePlaces';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -147,38 +155,62 @@ type VenueCardProps = {
 };
 
 function VenueCard({ venue, onSignUp, isSaved }: VenueCardProps) {
+  const isGoogle = venue.id.startsWith('google_');
+
   return (
     <View style={styles.venueCard}>
       <View style={styles.venueInfo}>
         <Text style={styles.venueName}>{venue.name}</Text>
+        {isGoogle && (
+          <View style={styles.googleBadge}>
+            <Text style={styles.googleBadgeText}>Discovered via Google</Text>
+          </View>
+        )}
         <Text style={styles.venueAddress} numberOfLines={1}>
           📍 {venue.address}
         </Text>
-        <View style={styles.venueDateTimeRow}>
-          <View style={styles.dateTimeBadge}>
-            <Ionicons name="calendar-outline" size={14} color={colors.primary} />
-            <Text style={styles.dateTimeText}>
-              {venue.day_of_week ? getDayLabel(venue.day_of_week) : venue.event_date ? formatDate(venue.event_date) : ''}
-            </Text>
+        {!isGoogle && (
+          <View style={styles.venueDateTimeRow}>
+            <View style={styles.dateTimeBadge}>
+              <Ionicons name="calendar-outline" size={14} color={colors.primary} />
+              <Text style={styles.dateTimeText}>
+                {venue.day_of_week ? getDayLabel(venue.day_of_week) : venue.event_date ? formatDate(venue.event_date) : ''}
+              </Text>
+            </View>
+            <View style={styles.dateTimeBadge}>
+              <Ionicons name="time-outline" size={14} color={colors.primary} />
+              <Text style={styles.dateTimeText}>{venue.event_time}</Text>
+            </View>
           </View>
-          <View style={styles.dateTimeBadge}>
-            <Ionicons name="time-outline" size={14} color={colors.primary} />
-            <Text style={styles.dateTimeText}>{venue.event_time}</Text>
-          </View>
-        </View>
-        {venue.sign_up_notes ? (
+        )}
+        {isGoogle && (
+          <Text style={styles.googleVenueHint}>Contact venue for schedule & sign-up</Text>
+        )}
+        {venue.sign_up_notes && !isGoogle ? (
           <Text style={styles.signUpNotes} numberOfLines={2}>{venue.sign_up_notes}</Text>
         ) : null}
         <Text style={styles.spotsLeft}>
-          {venue.spots_left} spots{venue.distance ? ` • ${venue.distance}` : ''}
+          {isGoogle ? '' : `${venue.spots_left} spots`}{venue.distance ? `${isGoogle ? '' : ' • '}${venue.distance}` : ''}
         </Text>
       </View>
       <TouchableOpacity
-        style={[styles.signUpButton, isSaved && styles.signUpButtonSaved]}
-        onPress={() => onSignUp(venue)}
+        style={[
+          styles.signUpButton,
+          isSaved && styles.signUpButtonSaved,
+          isGoogle && styles.googleDirectionsButton,
+        ]}
+        onPress={() => {
+          if (isGoogle) {
+            Linking.openURL(
+              `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(venue.name + ' ' + venue.address)}`,
+            );
+          } else {
+            onSignUp(venue);
+          }
+        }}
       >
         <Text style={[styles.signUpButtonText, isSaved && styles.signUpButtonTextSaved]}>
-          {isSaved ? '✓ Signed Up' : 'Sign Up'}
+          {isGoogle ? 'Directions' : isSaved ? '✓ Signed Up' : 'Sign Up'}
         </Text>
       </TouchableOpacity>
     </View>
@@ -378,13 +410,19 @@ export default function OpenMicFinderScreen({ navigation }: any) {
   const [openMics, setOpenMics] = useState<OpenMic[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loadingMics, setLoadingMics] = useState(true);
+  const [googleMics, setGoogleMics] = useState<OpenMic[]>([]);
+  const [loadingGoogle, setLoadingGoogle] = useState(false);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const mapRef = useRef<MapView>(null);
 
+  // US center as a wide default — will zoom to user location or search results
   const defaultRegion = {
-    latitude: 41.8781,
-    longitude: -87.6298,
-    latitudeDelta: 0.3,
-    longitudeDelta: 0.3,
+    latitude: 39.8283,
+    longitude: -98.5795,
+    latitudeDelta: 40,
+    longitudeDelta: 40,
   };
+  const [locationDenied, setLocationDenied] = useState(false);
 
   // Fetch open mics from Supabase
   const fetchOpenMics = async (userLocation?: Location.LocationObject) => {
@@ -421,6 +459,47 @@ export default function OpenMicFinderScreen({ navigation }: any) {
     setLoadingMics(false);
   };
 
+  // Fetch open mics from Google Places API
+  const fetchGoogleMics = async (
+    query: string,
+    userLat: number,
+    userLon: number,
+  ) => {
+    setLoadingGoogle(true);
+    try {
+      const results = query.trim()
+        ? await searchOpenMics(query, userLat, userLon)
+        : await searchOpenMicsNearby(userLat, userLon);
+
+      const converted = results.map((place) => {
+        const mic = convertGooglePlaceToOpenMic(place);
+        mic.distance = getDistanceMiles(userLat, userLon, mic.latitude!, mic.longitude!);
+        return mic;
+      });
+
+      setGoogleMics(converted);
+
+      // Re-center map if results are in a different area
+      if (converted.length > 0 && mapRef.current && query.trim()) {
+        const firstResult = converted[0];
+        if (firstResult.latitude && firstResult.longitude) {
+          mapRef.current.animateToRegion(
+            {
+              latitude: firstResult.latitude,
+              longitude: firstResult.longitude,
+              latitudeDelta: 0.15,
+              longitudeDelta: 0.15,
+            },
+            500,
+          );
+        }
+      }
+    } catch (error) {
+      // Sentry captures automatically
+    }
+    setLoadingGoogle(false);
+  };
+
   // Load saved events from storage
   useEffect(() => {
     loadSavedEvents();
@@ -429,22 +508,44 @@ export default function OpenMicFinderScreen({ navigation }: any) {
   // Get location then fetch open mics
   useEffect(() => {
     (async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
       let userLocation: Location.LocationObject | undefined;
-      if (status === 'granted') {
-        try {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === 'granted') {
           userLocation = await Location.getCurrentPositionAsync({});
           setLocation(userLocation);
-        } catch (error) {
-          // Sentry captures this automatically
+        } else {
+          setLocationDenied(true);
         }
+      } catch {
+        setLocationDenied(true);
       }
       fetchOpenMics(userLocation);
+
+      // Auto-search Google Places for nearby open mics
+      if (userLocation) {
+        fetchGoogleMics(
+          '',
+          userLocation.coords.latitude,
+          userLocation.coords.longitude,
+        );
+      }
     })();
   }, []);
 
-  // Filter open mics by search query
-  const filteredMics = openMics.filter((mic) => {
+  // Merge Supabase mics with Google Places mics, deduplicating by address
+  const mergedMics = (() => {
+    const supabaseAddresses = new Set(
+      openMics.map((m) => normalizeAddress(m.address)),
+    );
+    const uniqueGoogleMics = googleMics.filter(
+      (gm) => !supabaseAddresses.has(normalizeAddress(gm.address)),
+    );
+    return [...openMics, ...uniqueGoogleMics];
+  })();
+
+  // Filter by search query
+  const filteredMics = mergedMics.filter((mic) => {
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
     return (
@@ -452,6 +553,69 @@ export default function OpenMicFinderScreen({ navigation }: any) {
       mic.address.toLowerCase().includes(q)
     );
   });
+
+  // Search Google Places — works with or without GPS location
+  const searchGooglePlaces = (query: string) => {
+    if (location) {
+      // Have GPS — search with location bias
+      fetchGoogleMics(
+        query,
+        location.coords.latitude,
+        location.coords.longitude,
+      );
+    } else if (query.trim().length >= 3) {
+      // No GPS — search by city/query name (e.g. "Atlanta", "open mic LA")
+      fetchGoogleMicsByCity(query);
+    }
+  };
+
+  // Fetch Google mics by city name (no GPS needed)
+  const fetchGoogleMicsByCity = async (query: string) => {
+    setLoadingGoogle(true);
+    try {
+      const results = await searchOpenMicsByCity(query);
+      const converted = results.map((place) => convertGooglePlaceToOpenMic(place));
+      setGoogleMics(converted);
+
+      // Re-center map on results
+      if (converted.length > 0 && mapRef.current) {
+        const firstResult = converted[0];
+        if (firstResult.latitude && firstResult.longitude) {
+          mapRef.current.animateToRegion(
+            {
+              latitude: firstResult.latitude,
+              longitude: firstResult.longitude,
+              latitudeDelta: 0.15,
+              longitudeDelta: 0.15,
+            },
+            500,
+          );
+        }
+      }
+    } catch (error) {
+      // Sentry captures automatically
+    }
+    setLoadingGoogle(false);
+  };
+
+  // Debounced search handler for Google Places
+  const handleSearchChange = (text: string) => {
+    setSearchQuery(text);
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    if (text.trim().length >= 3) {
+      searchTimeoutRef.current = setTimeout(() => {
+        searchGooglePlaces(text);
+      }, 800);
+    }
+  };
+
+  const handleSearchSubmit = () => {
+    if (searchQuery.trim()) {
+      searchGooglePlaces(searchQuery);
+    }
+  };
 
   const loadSavedEvents = async () => {
     try {
@@ -635,26 +799,38 @@ export default function OpenMicFinderScreen({ navigation }: any) {
               <Text style={styles.searchIcon}>🔍</Text>
               <TextInput
                 style={styles.searchInput}
-                placeholder="Search by name or city"
+                placeholder="Search by city or name (e.g. &quot;Atlanta&quot;, &quot;LA&quot;)"
                 placeholderTextColor={colors.textMuted}
                 value={searchQuery}
-                onChangeText={setSearchQuery}
+                onChangeText={handleSearchChange}
+                onSubmitEditing={handleSearchSubmit}
+                returnKeyType="search"
                 clearButtonMode="while-editing"
               />
             </View>
           </View>
 
+          {/* Location denied banner */}
+          {locationDenied && !searchQuery.trim() && (
+            <View style={styles.locationBanner}>
+              <Text style={styles.locationBannerText}>
+                📍 Location access not available. Search by city name to find open mics near you!
+              </Text>
+            </View>
+          )}
+
           {/* Map */}
           <View style={styles.mapContainer}>
             <MapView
+              ref={mapRef}
               style={styles.map}
               provider={PROVIDER_DEFAULT}
-              initialRegion={defaultRegion}
+              initialRegion={mapRegion}
               region={mapRegion}
               showsUserLocation
               showsMyLocationButton
             >
-              {openMics
+              {filteredMics
                 .filter((mic) => mic.latitude !== null && mic.longitude !== null)
                 .map((mic) => (
                   <Marker
@@ -664,8 +840,12 @@ export default function OpenMicFinderScreen({ navigation }: any) {
                       longitude: mic.longitude!,
                     }}
                     title={mic.name}
-                    description={`${formatDate(mic.event_date)} at ${mic.event_time}`}
-                    pinColor={colors.primary}
+                    description={
+                      mic.id.startsWith('google_')
+                        ? mic.address
+                        : `${mic.event_date ? formatDate(mic.event_date) : mic.day_of_week ? getDayLabel(mic.day_of_week) : ''} at ${mic.event_time}`
+                    }
+                    pinColor={mic.id.startsWith('google_') ? colors.accent : colors.primary}
                   />
                 ))}
             </MapView>
@@ -679,7 +859,7 @@ export default function OpenMicFinderScreen({ navigation }: any) {
                 : 'Upcoming Open Mics'}
             </Text>
             <ScrollView style={styles.venueList} showsVerticalScrollIndicator={false}>
-              {loadingMics ? (
+              {loadingMics && loadingGoogle ? (
                 <View style={styles.loadingState}>
                   <Text style={styles.loadingText}>Finding open mics...</Text>
                 </View>
@@ -687,7 +867,9 @@ export default function OpenMicFinderScreen({ navigation }: any) {
                 <View style={styles.loadingState}>
                   <Text style={styles.loadingText}>
                     {searchQuery.trim()
-                      ? 'No open mics match your search.'
+                      ? 'No open mics match your search.\nTry searching a different city.'
+                      : locationDenied
+                      ? 'Search by city name above to find open mics!\ne.g. "Atlanta", "New York", "LA"'
                       : 'No upcoming open mics found.\nCheck back soon!'}
                   </Text>
                 </View>
@@ -1168,6 +1350,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.textDark,
   },
+  // Location banner
+  locationBanner: {
+    backgroundColor: '#fff3cd',
+    marginHorizontal: 16,
+    marginBottom: 12,
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#e8b944',
+  },
+  locationBannerText: {
+    fontSize: 13,
+    color: '#5c4a3a',
+    textAlign: 'center',
+    lineHeight: 18,
+  },
   // Map
   mapContainer: {
     height: 180,
@@ -1271,6 +1469,28 @@ const styles = StyleSheet.create({
   },
   signUpButtonTextSaved: {
     color: colors.primary,
+  },
+  googleDirectionsButton: {
+    backgroundColor: colors.accent,
+  },
+  googleBadge: {
+    backgroundColor: 'rgba(232, 185, 68, 0.15)',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+    alignSelf: 'flex-start',
+    marginBottom: 4,
+  },
+  googleBadgeText: {
+    fontSize: 10,
+    color: colors.accent,
+    fontWeight: '600' as const,
+  },
+  googleVenueHint: {
+    fontSize: 12,
+    color: colors.textMuted,
+    fontStyle: 'italic' as const,
+    marginTop: 4,
   },
   loadingState: {
     paddingVertical: 40,
