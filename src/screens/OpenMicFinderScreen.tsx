@@ -583,26 +583,33 @@ export default function OpenMicFinderScreen({ navigation }: any) {
 
   // Merge Supabase mics with Google Places mics, deduplicating by address
   const mergedMics = (() => {
-    const supabaseAddresses = new Set(
-      openMics.map((m) => normalizeAddress(m.address)),
-    );
-    const uniqueGoogleMics = googleMics.filter(
-      (gm) => !supabaseAddresses.has(normalizeAddress(gm.address)),
-    );
-    return [...openMics, ...uniqueGoogleMics];
+    try {
+      const supabaseAddresses = new Set(
+        openMics.map((m) => normalizeAddress(m.address || '')),
+      );
+      const uniqueGoogleMics = googleMics.filter(
+        (gm) => !supabaseAddresses.has(normalizeAddress(gm.address || '')),
+      );
+      return [...openMics, ...uniqueGoogleMics];
+    } catch {
+      return [...openMics, ...googleMics];
+    }
   })();
 
   // Filter by search query — only filter Supabase mics locally
   // Google results are already filtered by the API, so don't double-filter them
   const filteredMics = mergedMics.filter((mic) => {
-    if (!searchQuery.trim()) return true;
-    // Google results are already relevant — don't filter them out
-    if (activeGoogleSearch && mic.id.startsWith('google_')) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      mic.name.toLowerCase().includes(q) ||
-      mic.address.toLowerCase().includes(q)
-    );
+    try {
+      if (!searchQuery.trim()) return true;
+      // Google/host results are already relevant — don't filter them out
+      if (activeGoogleSearch && (mic.id.startsWith('google_') || mic.id.startsWith('host_'))) return true;
+      const q = searchQuery.toLowerCase();
+      const name = (mic.name || '').toLowerCase();
+      const address = (mic.address || '').toLowerCase();
+      return name.includes(q) || address.includes(q);
+    } catch {
+      return true;
+    }
   });
 
   // Search Google Places — works with or without GPS location
@@ -627,9 +634,14 @@ export default function OpenMicFinderScreen({ navigation }: any) {
 
   // Fetch Google mics by city name (no GPS needed)
   const fetchGoogleMicsByCity = async (query: string) => {
+    if (!query || query.trim().length < 2) return;
     setLoadingGoogle(true);
     try {
       const results = await searchOpenMicsByCity(query);
+      if (!results || !Array.isArray(results)) {
+        setLoadingGoogle(false);
+        return;
+      }
       const converted = results.map((place) => convertGooglePlaceToOpenMic(place));
       setGoogleMics(converted);
       setActiveGoogleSearch(true);
@@ -650,7 +662,7 @@ export default function OpenMicFinderScreen({ navigation }: any) {
         }
       }
     } catch (error) {
-      // Sentry captures automatically
+      console.error('fetchGoogleMicsByCity error:', error);
     }
     setLoadingGoogle(false);
   };

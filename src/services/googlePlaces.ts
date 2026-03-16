@@ -93,36 +93,45 @@ export async function searchOpenMicsNearby(
 export async function searchOpenMicsByCity(
   cityQuery: string,
 ): Promise<GooglePlaceResult[]> {
-  // Clean up the query — extract the city/location part
-  const cleaned = cityQuery
-    .replace(/\b(open mic|comedy|stand[- ]?up|in|near|around)\b/gi, '')
-    .trim();
+  try {
+    // Clean up the query — extract the city/location part
+    const cleaned = cityQuery
+      .replace(/(open mic|comedy|stand.?up|in|near|around)/gi, '')
+      .replace(/\s+/g, ' ')
+      .trim();
 
-  // If there's a city name left, search for comedy venues in that city
-  // If the user just typed "comedy" or "open mic", search as-is
-  const searchCity = cleaned.length >= 2 ? cleaned : cityQuery;
+    // If there's a city name left, search for comedy venues in that city
+    const searchCity = cleaned.length >= 2 ? cleaned : cityQuery;
 
-  // Run multiple searches to maximize results
-  const queries = [
-    `comedy club ${searchCity}`,
-    `open mic ${searchCity}`,
-    `comedy show ${searchCity}`,
-  ];
+    // Run all searches in parallel for speed and to avoid race conditions
+    const queries = [
+      `comedy club ${searchCity}`,
+      `open mic ${searchCity}`,
+      `comedy show ${searchCity}`,
+    ];
 
-  const allResults: GooglePlaceResult[] = [];
-  const seenIds = new Set<string>();
+    const resultsArrays = await Promise.all(
+      queries.map((query) => searchOpenMics(query))
+    );
 
-  for (const query of queries) {
-    const results = await searchOpenMics(query);
-    for (const place of results) {
-      if (!seenIds.has(place.id)) {
-        seenIds.add(place.id);
-        allResults.push(place);
+    // Deduplicate across all results
+    const allResults: GooglePlaceResult[] = [];
+    const seenIds = new Set<string>();
+
+    for (const results of resultsArrays) {
+      for (const place of results) {
+        if (!seenIds.has(place.id)) {
+          seenIds.add(place.id);
+          allResults.push(place);
+        }
       }
     }
-  }
 
-  return allResults;
+    return allResults;
+  } catch (error) {
+    console.error('searchOpenMicsByCity failed:', error);
+    return [];
+  }
 }
 
 export function convertGooglePlaceToOpenMic(place: GooglePlaceResult): OpenMic {
