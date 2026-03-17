@@ -667,20 +667,12 @@ export default function OpenMicFinderScreen({ navigation }: any) {
     setLoadingGoogle(false);
   };
 
-  // Debounced search handler for Google Places
+  // Search handler — only updates text, search triggers on submit
   const handleSearchChange = (text: string) => {
     setSearchQuery(text);
     if (!text.trim()) {
       setActiveGoogleSearch(false);
       setGoogleMics([]);
-    }
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
-    }
-    if (text.trim().length >= 3) {
-      searchTimeoutRef.current = setTimeout(() => {
-        searchGooglePlaces(text);
-      }, 800);
     }
   };
 
@@ -904,7 +896,7 @@ export default function OpenMicFinderScreen({ navigation }: any) {
               showsMyLocationButton
             >
               {filteredMics
-                .filter((mic) => mic.latitude !== null && mic.longitude !== null)
+                .filter((mic) => mic.latitude != null && mic.longitude != null && !isNaN(mic.latitude) && !isNaN(mic.longitude))
                 .map((mic) => (
                   <Marker
                     key={mic.id}
