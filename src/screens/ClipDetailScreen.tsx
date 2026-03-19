@@ -15,6 +15,7 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { Video, ResizeMode, AVPlaybackStatus } from 'expo-av';
 import YoutubePlayer from 'react-native-youtube-iframe';
 import { SetReviewThread } from '../components/SetReviewThread';
+import ReportModal from '../components/ReportModal';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -153,15 +154,17 @@ export default function ClipDetailScreen() {
   const navigation = useNavigation();
   const route = useRoute<RouteProp<ClipDetailRouteParams, 'ClipDetail'>>();
   const {
-    clipId,
-    clipOwnerId,
-    title,
-    creatorName,
-    videoId,
-    videoUri,
-    thumbnailUrl,
-    focusFeedbackId,
-  } = route.params;
+    clipId = '',
+    clipOwnerId = '',
+    title = 'Untitled',
+    creatorName = 'Unknown',
+    videoId = null,
+    videoUri = null,
+    thumbnailUrl = null,
+    focusFeedbackId = undefined,
+  } = route.params || {};
+
+  const [showReportModal, setShowReportModal] = useState(false);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -183,7 +186,13 @@ export default function ClipDetailScreen() {
             </Text>
           )}
         </View>
-        <View style={styles.placeholder} />
+        <TouchableOpacity
+          onPress={() => setShowReportModal(true)}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          style={{ padding: 4 }}
+        >
+          <Ionicons name="flag-outline" size={20} color={colors.textMuted} />
+        </TouchableOpacity>
       </View>
 
       {/* Set Review Thread with Video Header */}
@@ -200,6 +209,16 @@ export default function ClipDetailScreen() {
             thumbnailUrl={thumbnailUrl}
           />
         }
+      />
+
+      {/* Report Modal */}
+      <ReportModal
+        visible={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        reportedUserId={clipOwnerId}
+        contentType="video"
+        contentId={clipId}
+        userName={creatorName}
       />
     </SafeAreaView>
   );

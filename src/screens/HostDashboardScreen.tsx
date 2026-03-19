@@ -476,7 +476,7 @@ export default function HostDashboardScreen({ navigation }: any) {
 
   const handleLoadEvent = (event: SavedEvent) => {
     const eventDate = new Date(event.event_date + 'T00:00:00');
-    const [hours, minutes] = event.event_time.split(':');
+    const [hours, minutes] = (event.event_time || '12:00').split(':');
     const eventTime = new Date();
     eventTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
 

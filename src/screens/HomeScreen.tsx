@@ -15,12 +15,15 @@ import {
   Platform,
   StatusBar,
   Linking,
+  Share,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../services/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import VideoPlayerModal from '../components/VideoPlayerModal';
 import AudienceButton, { AudienceCount } from '../components/AudienceButton';
+import { getBlockedUserIds } from '../services/moderationService';
 
 // Local assets
 const logoImage = require('../../assets/logo.png');
@@ -236,7 +239,7 @@ function CommunityVideoCard({
         >
           <View style={styles.communityAvatar}>
             <Text style={styles.communityAvatarText}>
-              {creatorName[0]?.toUpperCase() || '?'}
+              {(creatorName || '?').charAt(0).toUpperCase()}
             </Text>
           </View>
           <View style={styles.communityCreatorInfo}>
@@ -273,6 +276,7 @@ function CommunityVideoCard({
 function VideoCard({ item, onPlay }: { item: FeedItem; onPlay: (item: FeedItem) => void }) {
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(item.likes);
+  const [bookmarked, setBookmarked] = useState(false);
 
   const handleLike = () => {
     if (!liked) {
@@ -285,6 +289,24 @@ function VideoCard({ item, onPlay }: { item: FeedItem; onPlay: (item: FeedItem) 
       }
     }
     setLiked(!liked);
+  };
+
+  const handleComment = () => {
+    // Comments feature - no action needed for now
+  };
+
+  const handleShare = async () => {
+    try {
+      await Share.share({
+        message: `Check out "${item.title}" by ${item.creator.name} on U Funny!`,
+      });
+    } catch {
+      // User cancelled share
+    }
+  };
+
+  const handleBookmark = () => {
+    setBookmarked(!bookmarked);
   };
 
   const thumbnailSource = item.youtubeId
@@ -333,7 +355,7 @@ function VideoCard({ item, onPlay }: { item: FeedItem; onPlay: (item: FeedItem) 
       <View style={styles.cardContent}>
         <View style={styles.creatorRow}>
           <View style={styles.creatorAvatar}>
-            <Text style={styles.creatorInitial}>{item.creator.name[0]}</Text>
+            <Text style={styles.creatorInitial}>{(item.creator?.name || '?').charAt(0).toUpperCase()}</Text>
           </View>
           <View style={styles.creatorInfo}>
             <View style={styles.creatorNameRow}>
@@ -350,22 +372,18 @@ function VideoCard({ item, onPlay }: { item: FeedItem; onPlay: (item: FeedItem) 
         <Text style={styles.cardDescription} numberOfLines={2}>{item.description}</Text>
 
         <View style={styles.actions}>
-          <TouchableOpacity style={styles.actionButton} onPress={handleLike}>
+          <TouchableOpacity style={styles.actionButton} onPress={handleLike} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
             <Text style={[styles.actionIcon, liked && styles.likedIcon]}>
               {liked ? '❤️' : '🤍'}
             </Text>
             <Text style={[styles.actionText, liked && styles.likedText]}>{likeCount}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton}>
-            <Text style={styles.actionIcon}>💬</Text>
-            <Text style={styles.actionText}>{item.comments}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton}>
+          <TouchableOpacity style={styles.actionButton} onPress={handleShare} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
             <Text style={styles.actionIcon}>↗️</Text>
             <Text style={styles.actionText}>Share</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton}>
-            <Text style={styles.actionIcon}>🔖</Text>
+          <TouchableOpacity style={styles.actionButton} onPress={handleBookmark} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <Text style={styles.actionIcon}>{bookmarked ? '🔖' : '📑'}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -389,6 +407,9 @@ export default function HomeScreen({ navigation }: any) {
 
   const fetchCommunityVideos = useCallback(async () => {
     try {
+      // Get blocked users to filter from feed
+      const blockedIds = await getBlockedUserIds();
+
       // Fetch Community Sets (category = 'community_sets' or null for backwards compatibility)
       const { data: setsVideos, error: setsError } = await supabase
         .from('community_videos')
@@ -416,14 +437,17 @@ export default function HomeScreen({ navigation }: any) {
 
       // Process Community Sets
       if (setsVideos && setsVideos.length > 0) {
-        const userIds = [...new Set(setsVideos.map(v => v.user_id))];
+        const filteredSets = blockedIds.length > 0
+          ? setsVideos.filter(v => !blockedIds.includes(v.user_id))
+          : setsVideos;
+        const userIds = [...new Set(filteredSets.map(v => v.user_id))];
         const { data: profiles } = await supabase
           .from('profiles')
           .select('id, display_name, stage_name, avatar_url, audience_count')
           .in('id', userIds);
 
         const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
-        const videosWithProfiles = setsVideos.map(video => ({
+        const videosWithProfiles = filteredSets.map(video => ({
           ...video,
           profiles: profileMap.get(video.user_id) || null,
         }));
@@ -436,14 +460,17 @@ export default function HomeScreen({ navigation }: any) {
 
       // Process Community Ideas
       if (ideasVideos && ideasVideos.length > 0) {
-        const userIds = [...new Set(ideasVideos.map(v => v.user_id))];
+        const filteredIdeas = blockedIds.length > 0
+          ? ideasVideos.filter(v => !blockedIds.includes(v.user_id))
+          : ideasVideos;
+        const userIds = [...new Set(filteredIdeas.map(v => v.user_id))];
         const { data: profiles } = await supabase
           .from('profiles')
           .select('id, display_name, stage_name, avatar_url, audience_count')
           .in('id', userIds);
 
         const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
-        const videosWithProfiles = ideasVideos.map(video => ({
+        const videosWithProfiles = filteredIdeas.map(video => ({
           ...video,
           profiles: profileMap.get(video.user_id) || null,
         }));
@@ -464,6 +491,13 @@ export default function HomeScreen({ navigation }: any) {
   useEffect(() => {
     fetchCommunityVideos();
   }, [fetchCommunityVideos]);
+
+  // Refetch community videos on focus to reflect blocks instantly
+  useFocusEffect(
+    useCallback(() => {
+      fetchCommunityVideos();
+    }, [fetchCommunityVideos])
+  );
 
   // Fetch user profile for initial — refetch every time screen is focused
   useFocusEffect(
@@ -735,10 +769,10 @@ export default function HomeScreen({ navigation }: any) {
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.navItem}
-          onPress={() => navigation.navigate('GoPremium')}
+          onPress={() => navigation.navigate('Profile')}
         >
-          <Text style={styles.navIcon}>⭐</Text>
-          <Text style={styles.navText}>Premium</Text>
+          <Text style={styles.navIcon}>👤</Text>
+          <Text style={styles.navText}>Profile</Text>
         </TouchableOpacity>
       </View>
 
@@ -1199,9 +1233,11 @@ const styles = StyleSheet.create({
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    minHeight: 44,
   },
   actionIcon: {
     fontSize: 18,

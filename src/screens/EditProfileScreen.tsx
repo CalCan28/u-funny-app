@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '../services/supabase';
+import { containsOffensiveContent } from '../services/moderationService';
 import { uploadImage } from '../services/imageUpload';
 
 // Design colors matching the app
@@ -287,6 +288,13 @@ export default function EditProfileScreen({ navigation }: any) {
         return;
       }
 
+      const textToCheck = [profile.display_name, profile.stage_name, profile.bio].filter(Boolean).join(' ');
+      if (containsOffensiveContent(textToCheck)) {
+        Alert.alert('Content Not Allowed', 'Your profile contains language that violates our Community Guidelines. Please revise and try again.');
+        setIsSaving(false);
+        return;
+      }
+
       // Clean up social handles (remove @ if present)
       const cleanInstagram = profile.instagram_handle.replace(/^@/, '').trim();
       const cleanTikTok = profile.tiktok_handle.replace(/^@/, '').trim();
@@ -395,7 +403,7 @@ export default function EditProfileScreen({ navigation }: any) {
               ) : (
                 <View style={styles.photoPlaceholder}>
                   <Text style={styles.photoPlaceholderText}>
-                    {profile.display_name?.[0]?.toUpperCase() || '?'}
+                    {(profile.display_name || '?').charAt(0).toUpperCase()}
                   </Text>
                 </View>
               )}

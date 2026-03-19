@@ -68,16 +68,21 @@ export default function CheckInScreen({ navigation }: any) {
   const handleBarCodeScanned = ({ type, data }: { type: string; data: string }) => {
     if (scanned) return;
 
-    setScanned(true);
+    try {
+      setScanned(true);
 
-    // Parse QR code data (in real app, this would be venue ID)
-    // For demo, we'll just use the data as venue name or default
-    const venue = data.includes('comedy') ? 'Comedy Club' :
-                  data.includes('laugh') ? 'Laugh Factory' :
-                  data.includes('improv') ? 'The Improv' : 'Comedy Club';
+      // Parse QR code data (in real app, this would be venue ID)
+      const safeData = (data || '').toLowerCase().trim();
+      const venue = safeData.includes('comedy') ? 'Comedy Club' :
+                    safeData.includes('laugh') ? 'Laugh Factory' :
+                    safeData.includes('improv') ? 'The Improv' : 'Comedy Club';
 
-    setVenueName(venue);
-    setShowModal(true);
+      setVenueName(venue);
+      setShowModal(true);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to process QR code. Try again.');
+      setScanned(false);
+    }
   };
 
   const handleModalClose = () => {

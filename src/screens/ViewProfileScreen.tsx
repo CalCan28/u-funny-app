@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   Platform,
   StatusBar,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -19,6 +20,8 @@ import { useAuth } from '../contexts/AuthContext';
 import AudienceButton, { AudienceCount } from '../components/AudienceButton';
 import VideoPlayerModal from '../components/VideoPlayerModal';
 import { ComedyStyleProfile, TipsAndCritiques } from '../components/SetReviewThread';
+import ReportModal from '../components/ReportModal';
+import BlockConfirmModal from '../components/BlockConfirmModal';
 
 const smileyIcon = require('../../assets/smiley-icon.png');
 
@@ -84,6 +87,9 @@ export default function ViewProfileScreen() {
     videoId: null,
     videoUri: null,
   });
+  const [showMenu, setShowMenu] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [showBlockModal, setShowBlockModal] = useState(false);
 
   const userId = route.params?.userId;
 
@@ -215,10 +221,42 @@ export default function ViewProfileScreen() {
           <Ionicons name="arrow-back" size={24} color={colors.textDark} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Profile</Text>
-        <View style={styles.placeholder} />
+        <TouchableOpacity
+          style={styles.menuButton}
+          onPress={() => setShowMenu(!showMenu)}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons name="ellipsis-vertical" size={22} color={colors.textDark} />
+        </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      {/* Dropdown Menu */}
+      {showMenu && (
+        <View style={styles.dropdownMenu}>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => {
+              setShowMenu(false);
+              setShowReportModal(true);
+            }}
+          >
+            <Ionicons name="flag-outline" size={18} color={colors.error || '#d9534f'} />
+            <Text style={[styles.menuItemText, { color: colors.error || '#d9534f' }]}>Report User</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => {
+              setShowMenu(false);
+              setShowBlockModal(true);
+            }}
+          >
+            <Ionicons name="ban-outline" size={18} color={colors.error || '#d9534f'} />
+            <Text style={[styles.menuItemText, { color: colors.error || '#d9534f' }]}>Block User</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false} onScrollBeginDrag={() => setShowMenu(false)}>
         {/* Profile Header Card */}
         <View style={styles.profileHeader}>
           <View style={styles.profileTopRow}>
@@ -260,7 +298,7 @@ export default function ViewProfileScreen() {
               <View style={styles.statItem}>
                 <Text style={styles.statIcon}>🎭</Text>
                 <Text style={styles.statText}>
-                  {`${profile.years_experience} ${Number(profile.years_experience) === 1 ? 'year' : 'years'} of performing`}
+                  {`${profile.years_experience} ${parseInt(String(profile.years_experience || '0'), 10) === 1 ? 'year' : 'years'} of performing`}
                 </Text>
               </View>
             ) : null}
@@ -361,6 +399,24 @@ export default function ViewProfileScreen() {
         title={videoPlayer.title}
         onClose={closeVideoPlayer}
       />
+
+      {/* Report Modal */}
+      <ReportModal
+        visible={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        reportedUserId={userId}
+        contentType="profile"
+        userName={profile?.stage_name || profile?.display_name || 'this user'}
+      />
+
+      {/* Block Confirm Modal */}
+      <BlockConfirmModal
+        visible={showBlockModal}
+        onClose={() => setShowBlockModal(false)}
+        userId={userId}
+        userName={profile?.stage_name || profile?.display_name || 'this user'}
+        onBlocked={() => navigation.goBack()}
+      />
     </SafeAreaView>
   );
 }
@@ -414,6 +470,38 @@ const styles = StyleSheet.create({
   },
   placeholder: {
     width: 32,
+  },
+  menuButton: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dropdownMenu: {
+    position: 'absolute',
+    top: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 48 : 96,
+    right: 16,
+    backgroundColor: '#fdfcfa',
+    borderRadius: 12,
+    paddingVertical: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 5,
+    zIndex: 100,
+    minWidth: 180,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  menuItemText: {
+    fontSize: 15,
+    fontWeight: '600',
   },
   content: {
     flex: 1,

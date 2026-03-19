@@ -223,7 +223,7 @@ export default function SettingsScreen() {
           text: 'Send Link',
           onPress: async () => {
             try {
-              const { error } = await supabase.auth.resetPasswordForEmail(user.email!, {
+              const { error } = await supabase.auth.resetPasswordForEmail(user?.email || '', {
                 redirectTo: 'ufunny://reset-password',
               });
 
