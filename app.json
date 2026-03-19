@@ -2,7 +2,7 @@
   "expo": {
     "name": "U Funny",
     "slug": "u-funny-app",
-    "version": "1.0.0",
+    "version": "1.0.2",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
     "scheme": "ufunny",
@@ -19,14 +19,17 @@
         "NSLocationWhenInUseUsageDescription": "U Funny needs your location to find open mics near you.",
         "NSCameraUsageDescription": "U Funny needs camera access to scan QR codes for venue check-in.",
         "NSPhotoLibraryUsageDescription": "U Funny needs access to save QR codes and recordings to your photos.",
-        "NSMicrophoneUsageDescription": "U Funny needs microphone access to record your performances."
+        "NSMicrophoneUsageDescription": "U Funny needs microphone access to record your performances.",
+        "ITSAppUsesNonExemptEncryption": false
       },
       "associatedDomains": [
         "applinks:ufunny.app"
-      ]
+      ],
+      "appleTeamId": "9K439XM936"
     },
     "android": {
-      "package": "com.ufunny.app",
+      "name": "uFunny",
+      "package": "com.ufunnyapp.android",
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#f5f1e8"
