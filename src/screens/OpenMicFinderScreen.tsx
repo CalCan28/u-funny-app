@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Linking from 'expo-linking';
 import { supabase } from '../services/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import {
   searchOpenMics,
   searchOpenMicsNearby,
@@ -109,9 +110,11 @@ type SavedEvent = {
 type TabType = 'discover' | 'calendar';
 type CalendarViewType = 'list' | 'calendar';
 
-// Format date for display
-const formatDate = (dateString: string) => {
+// Format date for display (null-safe)
+const formatDate = (dateString: string | null | undefined): string => {
+  if (!dateString) return 'TBD';
   const date = new Date(dateString + 'T00:00:00');
+  if (isNaN(date.getTime())) return 'TBD';
   return date.toLocaleDateString('en-US', {
     weekday: 'short',
     month: 'short',
@@ -119,8 +122,10 @@ const formatDate = (dateString: string) => {
   });
 };
 
-const formatFullDate = (dateString: string) => {
+const formatFullDate = (dateString: string | null | undefined): string => {
+  if (!dateString) return 'Date TBD — Contact venue';
   const date = new Date(dateString + 'T00:00:00');
+  if (isNaN(date.getTime())) return 'Date TBD — Contact venue';
   return date.toLocaleDateString('en-US', {
     weekday: 'long',
     month: 'long',
@@ -224,7 +229,9 @@ type CalendarEventCardProps = {
 };
 
 function CalendarEventCard({ event, onRemove, compact = false }: CalendarEventCardProps) {
-  const isPast = new Date(event.date) < new Date();
+  const hasValidDate = event.date && event.date !== 'TBD';
+  const parsedDate = hasValidDate ? new Date(event.date + 'T00:00:00') : null;
+  const isPast = parsedDate ? parsedDate < new Date() : false;
 
   if (compact) {
     return (
@@ -245,10 +252,10 @@ function CalendarEventCard({ event, onRemove, compact = false }: CalendarEventCa
     <View style={[styles.calendarEventCard, isPast && styles.calendarEventCardPast]}>
       <View style={styles.calendarEventDate}>
         <Text style={styles.calendarEventDay}>
-          {new Date(event.date + 'T00:00:00').getDate()}
+          {parsedDate ? parsedDate.getDate() : 'TBD'}
         </Text>
         <Text style={styles.calendarEventMonth}>
-          {new Date(event.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short' })}
+          {parsedDate ? parsedDate.toLocaleDateString('en-US', { month: 'short' }) : ''}
         </Text>
       </View>
       <View style={styles.calendarEventInfo}>
@@ -397,6 +404,7 @@ function CalendarGrid({
 
 export default function OpenMicFinderScreen({ navigation }: any) {
   const { user } = useAuth();
+  const { theme } = useTheme();
   const [activeTab, setActiveTab] = useState<TabType>('discover');
   const [calendarView, setCalendarView] = useState<CalendarViewType>('calendar');
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
@@ -428,81 +436,85 @@ export default function OpenMicFinderScreen({ navigation }: any) {
   // Fetch open mics from Supabase (both open_mics table AND host-created events)
   const fetchOpenMics = async (userLocation?: Location.LocationObject) => {
     setLoadingMics(true);
-    const today = new Date().toISOString().split('T')[0];
+    try {
+      const today = new Date().toISOString().split('T')[0];
 
-    // Fetch from open_mics table
-    const { data: openMicData, error: openMicError } = await supabase
-      .from('open_mics')
-      .select('*');
+      // Fetch from open_mics table
+      const { data: openMicData, error: openMicError } = await supabase
+        .from('open_mics')
+        .select('*');
 
-    // Fetch from events table (host-created events that are active and today or future)
-    const { data: hostEventData, error: hostEventError } = await supabase
-      .from('events')
-      .select('*')
-      .eq('is_active', true)
-      .gte('event_date', today);
+      // Fetch from events table (host-created events that are active and today or future)
+      const { data: hostEventData, error: hostEventError } = await supabase
+        .from('events')
+        .select('*')
+        .eq('is_active', true)
+        .gte('event_date', today);
 
-    const mics: OpenMic[] = [];
+      const mics: OpenMic[] = [];
 
-    // Add open_mics entries
-    if (!openMicError && openMicData) {
-      for (const mic of openMicData) {
-        mics.push({
-          ...mic,
-          distance:
-            userLocation && mic.latitude && mic.longitude
-              ? getDistanceMiles(
-                  userLocation.coords.latitude,
-                  userLocation.coords.longitude,
-                  mic.latitude,
-                  mic.longitude
-                )
-              : undefined,
-        });
+      // Add open_mics entries
+      if (!openMicError && openMicData) {
+        for (const mic of openMicData) {
+          mics.push({
+            ...mic,
+            distance:
+              userLocation && mic.latitude && mic.longitude
+                ? getDistanceMiles(
+                    userLocation.coords.latitude,
+                    userLocation.coords.longitude,
+                    mic.latitude,
+                    mic.longitude
+                  )
+                : undefined,
+          });
+        }
       }
-    }
 
-    // Add host-created events (convert to OpenMic format)
-    if (!hostEventError && hostEventData) {
-      for (const event of hostEventData) {
-        // Build full address from parts
-        const fullAddress = [event.address, event.city, event.state]
-          .filter(Boolean)
-          .join(', ');
+      // Add host-created events (convert to OpenMic format)
+      if (!hostEventError && hostEventData) {
+        for (const event of hostEventData) {
+          // Build full address from parts
+          const fullAddress = [event.address, event.city, event.state]
+            .filter(Boolean)
+            .join(', ');
 
-        mics.push({
-          id: `host_${event.id}`,
-          name: event.venue_name || 'Open Mic Event',
-          address: fullAddress,
-          latitude: event.latitude || null,
-          longitude: event.longitude || null,
-          event_date: event.event_date,
-          event_time: event.event_time || 'Check with host',
-          spots_left: 0,
-          day_of_week: null,
-          sign_up_notes: event.description || 'Community event — hosted on U Funny',
-          distance:
-            userLocation && event.latitude && event.longitude
-              ? getDistanceMiles(
-                  userLocation.coords.latitude,
-                  userLocation.coords.longitude,
-                  event.latitude,
-                  event.longitude
-                )
-              : undefined,
-        });
+          mics.push({
+            id: `host_${event.id}`,
+            name: event.venue_name || 'Open Mic Event',
+            address: fullAddress,
+            latitude: event.latitude || null,
+            longitude: event.longitude || null,
+            event_date: event.event_date,
+            event_time: event.event_time || 'Check with host',
+            spots_left: 0,
+            day_of_week: null,
+            sign_up_notes: event.description || 'Community event — hosted on U Funny',
+            distance:
+              userLocation && event.latitude && event.longitude
+                ? getDistanceMiles(
+                    userLocation.coords.latitude,
+                    userLocation.coords.longitude,
+                    event.latitude,
+                    event.longitude
+                  )
+                : undefined,
+          });
+        }
       }
+
+      // Sort: recurring mics by days until next occurrence, one-time events by date
+      mics.sort((a, b) => {
+        const aDays = a.day_of_week ? daysUntilNext(a.day_of_week) : 0;
+        const bDays = b.day_of_week ? daysUntilNext(b.day_of_week) : 0;
+        if (aDays !== bDays) return aDays - bDays;
+        return (a.event_time || '').localeCompare(b.event_time || '');
+      });
+
+      setOpenMics(mics);
+    } catch (error) {
+      // Network or Supabase failure — show whatever we already have
     }
-
-    // Sort: recurring mics by days until next occurrence, one-time events by date
-    mics.sort((a, b) => {
-      const aDays = a.day_of_week ? daysUntilNext(a.day_of_week) : 0;
-      const bDays = b.day_of_week ? daysUntilNext(b.day_of_week) : 0;
-      if (aDays !== bDays) return aDays - bDays;
-      return (a.event_time || '').localeCompare(b.event_time || '');
-    });
-
-    setOpenMics(mics);
     setLoadingMics(false);
   };
 
@@ -703,7 +715,9 @@ export default function OpenMicFinderScreen({ navigation }: any) {
   };
 
   const handleSignUpPress = (venue: OpenMic) => {
-    const isAlreadySaved = savedEvents.some((e) => e.venueId === venue.id && e.date === venue.event_date);
+    const isAlreadySaved = savedEvents.some(
+      (e) => e.venueId === venue.id && e.date === (venue.event_date || 'TBD')
+    );
 
     if (isAlreadySaved) {
       Alert.alert(
@@ -721,37 +735,46 @@ export default function OpenMicFinderScreen({ navigation }: any) {
     if (!confirmModal.venue) return;
 
     const venue = confirmModal.venue;
+    const safeDate = venue.event_date || 'TBD';
     const newEvent: SavedEvent = {
-      id: `${venue.id}-${venue.event_date}-${Date.now()}`,
+      id: `${venue.id}-${safeDate}-${Date.now()}`,
       venueId: venue.id,
       name: venue.name,
       address: venue.address,
-      date: venue.event_date,
+      date: safeDate,
       time: venue.event_time,
       savedAt: new Date().toISOString(),
     };
 
-    const updatedEvents = [...savedEvents, newEvent].sort(
-      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-    );
+    const updatedEvents = [...savedEvents, newEvent].sort((a, b) => {
+      // Push 'TBD' dates to the end
+      if (a.date === 'TBD' && b.date === 'TBD') return 0;
+      if (a.date === 'TBD') return 1;
+      if (b.date === 'TBD') return -1;
+      return new Date(a.date).getTime() - new Date(b.date).getTime();
+    });
 
     saveSavedEvents(updatedEvents);
     setConfirmModal({ visible: false, venue: null });
 
     // Create notification for event sign-up
     if (user) {
-      await supabase.from('notifications').insert({
-        user_id: user.id,
-        type: 'event_signup',
-        title: 'Open Mic Sign-Up Confirmed! 🎤',
-        body: `You're signed up for ${venue.name} on ${formatDate(venue.event_date)} at ${venue.event_time}`,
-        data: {
-          venue_id: venue.id,
-          venue_name: venue.name,
-          event_date: venue.event_date,
-          event_time: venue.event_time,
-        },
-      });
+      try {
+        await supabase.from('notifications').insert({
+          user_id: user.id,
+          type: 'event_signup',
+          title: 'Open Mic Sign-Up Confirmed! 🎤',
+          body: `You're signed up for ${venue.name} on ${formatDate(venue.event_date)} at ${venue.event_time}`,
+          data: {
+            venue_id: venue.id,
+            venue_name: venue.name,
+            event_date: venue.event_date,
+            event_time: venue.event_time,
+          },
+        });
+      } catch (error) {
+        // Non-critical — sign-up still succeeded, notification just failed silently
+      }
     }
 
     Alert.alert(
@@ -782,8 +805,8 @@ export default function OpenMicFinderScreen({ navigation }: any) {
     );
   };
 
-  const isVenueSaved = (venueId: string, eventDate: string) => {
-    return savedEvents.some((e) => e.venueId === venueId && e.date === eventDate);
+  const isVenueSaved = (venueId: string, eventDate: string | null) => {
+    return savedEvents.some((e) => e.venueId === venueId && e.date === (eventDate || 'TBD'));
   };
 
   const handlePrevMonth = () => {
@@ -809,10 +832,10 @@ export default function OpenMicFinderScreen({ navigation }: any) {
       }
     : defaultRegion;
 
-  // Separate upcoming and past events
+  // Separate upcoming and past events (TBD dates go to upcoming)
   const today = new Date().toISOString().split('T')[0];
-  const upcomingEvents = savedEvents.filter((e) => e.date >= today);
-  const pastEvents = savedEvents.filter((e) => e.date < today);
+  const upcomingEvents = savedEvents.filter((e) => !e.date || e.date === 'TBD' || e.date >= today);
+  const pastEvents = savedEvents.filter((e) => e.date && e.date !== 'TBD' && e.date < today);
 
   // Events for selected date
   const selectedDateEvents = selectedDate
@@ -820,9 +843,9 @@ export default function OpenMicFinderScreen({ navigation }: any) {
     : [];
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       {/* Tab Switcher */}
-      <View style={styles.tabContainer}>
+      <View style={[styles.tabContainer, { backgroundColor: theme.cardBg, borderBottomColor: theme.cardBorder }]}>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'discover' && styles.tabActive]}
           onPress={() => setActiveTab('discover')}
@@ -1119,7 +1142,7 @@ export default function OpenMicFinderScreen({ navigation }: any) {
               <View style={styles.confirmDetails}>
                 <Text style={styles.confirmVenue}>{confirmModal.venue.name}</Text>
                 <Text style={styles.confirmDateTime}>
-                  📅 {formatFullDate(confirmModal.venue.event_date)}
+                  📅 {formatFullDate(confirmModal.venue?.event_date)}
                 </Text>
                 <Text style={styles.confirmDateTime}>🕐 {confirmModal.venue.event_time}</Text>
                 <Text style={styles.confirmAddress}>{confirmModal.venue.address}</Text>
