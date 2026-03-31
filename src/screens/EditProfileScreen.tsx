@@ -15,10 +15,16 @@ import {
   StatusBar,
   Modal,
 } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '../services/supabase';
+
+// ImagePicker: native on mobile, file input on web
+let ImagePicker: any = null;
+if (Platform.OS !== 'web') {
+  ImagePicker = require('expo-image-picker');
+}
 import { containsOffensiveContent } from '../services/moderationService';
 import { uploadImage } from '../services/imageUpload';
+import { useTheme } from '../contexts/ThemeContext';
 
 // Design colors matching the app
 const colors = {
@@ -70,6 +76,7 @@ type ProfileData = {
 };
 
 export default function EditProfileScreen({ navigation }: any) {
+  const { theme } = useTheme();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
@@ -140,7 +147,38 @@ export default function EditProfileScreen({ navigation }: any) {
     }
   };
 
+  // Web: trigger a hidden file input for image selection
+  const handleWebFilePick = () => {
+    if (Platform.OS !== 'web') return;
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = async (e: any) => {
+      const file = e.target.files?.[0];
+      if (!file || !userId) return;
+      setIsUploadingImage(true);
+      try {
+        const uri = URL.createObjectURL(file);
+        const { publicUrl, error } = await uploadImage(uri, 'avatars', userId);
+        if (error) {
+          Alert.alert('Upload Failed', error);
+        } else if (publicUrl) {
+          setProfile(prev => ({ ...prev, avatar_url: publicUrl }));
+        }
+      } catch {
+        Alert.alert('Error', 'Failed to upload image');
+      } finally {
+        setIsUploadingImage(false);
+      }
+    };
+    input.click();
+  };
+
   const handlePickImage = async () => {
+    if (Platform.OS === 'web') {
+      handleWebFilePick();
+      return;
+    }
     try {
       // Request permission
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -188,7 +226,6 @@ export default function EditProfileScreen({ navigation }: any) {
         setProfile(prev => ({ ...prev, avatar_url: publicUrl }));
       }
     } catch (error: any) {
-      // Sentry captures this automatically
       Alert.alert('Error', 'Failed to select image');
     } finally {
       setIsUploadingImage(false);
@@ -196,6 +233,11 @@ export default function EditProfileScreen({ navigation }: any) {
   };
 
   const handleTakePhoto = async () => {
+    if (Platform.OS === 'web') {
+      // Web: fall back to file picker (no native camera access)
+      handleWebFilePick();
+      return;
+    }
     try {
       // Request camera permission
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
@@ -349,7 +391,7 @@ export default function EditProfileScreen({ navigation }: any) {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Loading profile...</Text>
@@ -359,17 +401,17 @@ export default function EditProfileScreen({ navigation }: any) {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, { backgroundColor: theme.cardBg, borderBottomColor: theme.cardBorder }]}>
           <TouchableOpacity onPress={handleCancel}>
             <Text style={styles.cancelButton}>Cancel</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Edit Profile</Text>
+          <Text style={[styles.headerTitle, { color: theme.textDark }]}>Edit Profile</Text>
           <TouchableOpacity onPress={handleSave} disabled={isSaving}>
             {isSaving ? (
               <ActivityIndicator size="small" color={colors.primary} />
@@ -418,7 +460,7 @@ export default function EditProfileScreen({ navigation }: any) {
           <View style={styles.form}>
             {/* Display Name */}
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Display Name *</Text>
+              <Text style={[styles.label, { color: theme.textDark }]}>Display Name *</Text>
               <TextInput
                 style={styles.input}
                 placeholder="How you want to be known"
@@ -505,8 +547,8 @@ export default function EditProfileScreen({ navigation }: any) {
 
             {/* Social Links Section */}
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Social Links</Text>
-              <Text style={styles.sectionSubtitle}>Optional - help fans find you</Text>
+              <Text style={[styles.sectionTitle, { color: theme.textDark }]}>Social Links</Text>
+              <Text style={[styles.sectionSubtitle, { color: theme.textMuted }]}>Optional - help fans find you</Text>
             </View>
 
             {/* Instagram */}

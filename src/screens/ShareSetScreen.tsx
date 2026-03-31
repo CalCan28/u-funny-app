@@ -17,11 +17,20 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import * as ImagePicker from 'expo-image-picker';
-import * as VideoThumbnails from 'expo-video-thumbnails';
-import * as FileSystem from 'expo-file-system/legacy';
+import { containsOffensiveContent } from '../services/moderationService';
+// Native-only imports — lazy loaded for web compatibility
+let ImagePicker: any = null;
+let VideoThumbnails: any = null;
+let FileSystem: any = null;
+
+if (Platform.OS !== 'web') {
+  ImagePicker = require('expo-image-picker');
+  VideoThumbnails = require('expo-video-thumbnails');
+  FileSystem = require('expo-file-system/legacy');
+}
 import { supabase } from '../services/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { decode } from 'base64-arraybuffer';
 
 const colors = {
@@ -94,6 +103,7 @@ const formatDateForPicker = (date: Date) => {
 export default function ShareSetScreen() {
   const navigation = useNavigation();
   const { user } = useAuth();
+  const { theme } = useTheme();
 
   const [uploadMethod, setUploadMethod] = useState<UploadMethod>(null);
   const [youtubeUrl, setYoutubeUrl] = useState('');
@@ -165,6 +175,38 @@ export default function ShareSetScreen() {
   };
 
   const handlePickFromLibrary = async () => {
+    if (Platform.OS === 'web') {
+      // Web: use HTML file input for video selection
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'video/*';
+      input.onchange = async (e: any) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Check file size (limit to 50MB)
+        if (file.size > 50 * 1024 * 1024) {
+          Alert.alert(
+            'Video Too Large',
+            'Uploads are limited to 50MB. Try a shorter clip, or upload to YouTube first and paste the link.',
+            [{ text: 'Got it' }]
+          );
+          return;
+        }
+
+        const uri = URL.createObjectURL(file);
+        setVideoData({
+          title: '',
+          thumbnail_url: '', // No thumbnail generation on web
+          video_id: `local_${Date.now()}`,
+          local_uri: uri,
+        });
+        setUploadMethod('library');
+      };
+      input.click();
+      return;
+    }
+
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
@@ -201,7 +243,7 @@ export default function ShareSetScreen() {
 
         // Check file size (limit to 50MB for Supabase storage)
         try {
-          const fileInfo = await FileSystem.getInfoAsync(video.uri, { size: true });
+          const fileInfo = await FileSystem.getInfoAsync(video.uri);
           if (fileInfo.exists && 'size' in fileInfo && fileInfo.size && fileInfo.size > 50 * 1024 * 1024) {
             Alert.alert(
               'Video Too Large',
@@ -234,7 +276,6 @@ export default function ShareSetScreen() {
         setUploadMethod('library');
       }
     } catch (error) {
-      // Sentry captures this automatically
       Alert.alert('Error', 'Failed to pick video from library');
     }
   };
@@ -250,18 +291,28 @@ export default function ShareSetScreen() {
       const videoFileName = `${userId}/${timestamp}_video.mp4`;
       const thumbnailFileName = `${userId}/${timestamp}_thumb.jpg`;
 
-      // Read video file as base64
+      // Read and upload video
       setUploadProgress(10);
-      const videoBase64 = await FileSystem.readAsStringAsync(localUri, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
+
+      let videoUploadData: ArrayBuffer | Blob;
+      if (Platform.OS === 'web') {
+        // Web: fetch the blob URL
+        const response = await fetch(localUri);
+        videoUploadData = await response.blob();
+      } else {
+        // Native: read as base64 and convert
+        const videoBase64 = await FileSystem.readAsStringAsync(localUri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+        videoUploadData = decode(videoBase64);
+      }
 
       setUploadProgress(30);
 
       // Upload video to Supabase Storage
       const { data: videoData, error: videoError } = await supabase.storage
         .from('videos')
-        .upload(videoFileName, decode(videoBase64), {
+        .upload(videoFileName, videoUploadData, {
           contentType: 'video/mp4',
           upsert: true,
         });
@@ -277,32 +328,34 @@ export default function ShareSetScreen() {
         .from('videos')
         .getPublicUrl(videoFileName);
 
-      // Generate and upload thumbnail
+      // Generate and upload thumbnail (native only — web skips this)
       let thumbnailUrl = '';
-      try {
-        const thumbnail = await VideoThumbnails.getThumbnailAsync(localUri, {
-          time: 1000,
-        });
-
-        const thumbBase64 = await FileSystem.readAsStringAsync(thumbnail.uri, {
-          encoding: FileSystem.EncodingType.Base64,
-        });
-
-        const { error: thumbError } = await supabase.storage
-          .from('videos')
-          .upload(thumbnailFileName, decode(thumbBase64), {
-            contentType: 'image/jpeg',
-            upsert: true,
+      if (Platform.OS !== 'web') {
+        try {
+          const thumbnail = await VideoThumbnails.getThumbnailAsync(localUri, {
+            time: 1000,
           });
 
-        if (!thumbError) {
-          const { data: thumbUrlData } = supabase.storage
+          const thumbBase64 = await FileSystem.readAsStringAsync(thumbnail.uri, {
+            encoding: FileSystem.EncodingType.Base64,
+          });
+
+          const { error: thumbError } = await supabase.storage
             .from('videos')
-            .getPublicUrl(thumbnailFileName);
-          thumbnailUrl = thumbUrlData.publicUrl;
+            .upload(thumbnailFileName, decode(thumbBase64), {
+              contentType: 'image/jpeg',
+              upsert: true,
+            });
+
+          if (!thumbError) {
+            const { data: thumbUrlData } = supabase.storage
+              .from('videos')
+              .getPublicUrl(thumbnailFileName);
+            thumbnailUrl = thumbUrlData.publicUrl;
+          }
+        } catch (thumbError) {
+          // Sentry captures this automatically
         }
-      } catch (thumbError) {
-        // Sentry captures this automatically
       }
 
       setUploadProgress(100);
@@ -354,6 +407,12 @@ export default function ShareSetScreen() {
 
     if (!customTitle.trim()) {
       Alert.alert('Missing Title', 'Please enter a title for your video');
+      return;
+    }
+
+    const textToCheck = [customTitle, venueName].filter(Boolean).join(' ');
+    if (containsOffensiveContent(textToCheck)) {
+      Alert.alert('Content Not Allowed', 'Your submission contains language that violates our Community Guidelines. Please revise and try again.');
       return;
     }
 
@@ -433,16 +492,16 @@ export default function ShareSetScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: theme.cardBg, borderBottomColor: theme.cardBorder }]}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Ionicons name="arrow-back" size={24} color={colors.textDark} />
+          <Ionicons name="arrow-back" size={24} color={theme.textDark} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Share Your Set</Text>
+        <Text style={[styles.headerTitle, { color: theme.textDark }]}>Share Your Set</Text>
         <TouchableOpacity onPress={clearForm}>
           <Text style={styles.clearButton}>Clear</Text>
         </TouchableOpacity>

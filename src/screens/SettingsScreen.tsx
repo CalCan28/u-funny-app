@@ -17,12 +17,22 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import Constants from 'expo-constants';
-import { useCameraPermissions } from 'expo-camera';
-import { Audio } from 'expo-av';
-import * as MediaLibrary from 'expo-media-library';
-import * as Location from 'expo-location';
+
+// Native-only permission modules — lazy loaded for web compatibility
+let useCameraPermissions: any = null;
+let Audio: any = null;
+let MediaLibrary: any = null;
+let Location: any = null;
+
+if (Platform.OS !== 'web') {
+  useCameraPermissions = require('expo-camera').useCameraPermissions;
+  Audio = require('expo-av').Audio;
+  MediaLibrary = require('expo-media-library');
+  Location = require('expo-location');
+}
 import { supabase } from '../services/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 
 const colors = {
   background: '#f5f1e8',
@@ -58,9 +68,83 @@ const defaultSettings: Settings = {
   show_checkin_activity: true,
 };
 
+function DisplaySection() {
+  const { isDark, toggleTheme, theme } = useTheme();
+  return (
+    <View style={displayStyles.section}>
+      <Text style={[displayStyles.sectionTitle, { color: theme.textDark }]}>Display</Text>
+      <View style={[displayStyles.card, { backgroundColor: theme.cardBg, borderColor: theme.cardBorder }]}>
+        <View style={displayStyles.settingRow}>
+          <View style={displayStyles.settingInfo}>
+            <Text style={[displayStyles.settingLabel, { color: theme.textDark }]}>
+              {isDark ? '🌙' : '☀️'} Dark Mode
+            </Text>
+            <Text style={[displayStyles.settingDescription, { color: theme.textMuted }]}>
+              {isDark ? 'Switch to light mode' : 'Easier on the eyes at night'}
+            </Text>
+          </View>
+          <View style={{
+            backgroundColor: isDark ? 'rgba(127, 168, 130, 0.2)' : 'rgba(107, 142, 111, 0.1)',
+            borderRadius: 20,
+            paddingHorizontal: 4,
+            paddingVertical: 2,
+            borderWidth: 2,
+            borderColor: theme.primary,
+          }}>
+            <Switch
+              value={isDark}
+              onValueChange={toggleTheme}
+              trackColor={{ false: '#9b8b7a', true: theme.primary }}
+              thumbColor={isDark ? '#e8b944' : '#fff'}
+              ios_backgroundColor="#9b8b7a"
+            />
+          </View>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+const displayStyles = StyleSheet.create({
+  section: { marginBottom: 24 },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: colors.textDark,
+    marginBottom: 12,
+    paddingHorizontal: 4,
+  },
+  card: {
+    backgroundColor: colors.cardBg,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    overflow: 'hidden',
+  },
+  settingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  settingInfo: { flex: 1, marginRight: 12 },
+  settingLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.textDark,
+  },
+  settingDescription: {
+    fontSize: 12,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
+});
+
 export default function SettingsScreen() {
   const navigation = useNavigation();
   const { user } = useAuth();
+  const { theme } = useTheme();
   const [settings, setSettings] = useState<Settings>(defaultSettings);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -69,7 +153,7 @@ export default function SettingsScreen() {
   const [deleting, setDeleting] = useState(false);
 
   // Permission states
-  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
+  const [cameraPermission, setCameraPermission] = useState<any>(null);
   const [audioPermission, setAudioPermission] = useState<boolean | null>(null);
   const [mediaLibraryPermission, setMediaLibraryPermission] = useState<boolean | null>(null);
   const [locationPermission, setLocationPermission] = useState<boolean | null>(null);
@@ -78,38 +162,58 @@ export default function SettingsScreen() {
 
   useEffect(() => {
     loadSettings();
-    checkPermissions();
+    if (Platform.OS !== 'web') {
+      checkPermissions();
+    }
   }, []);
 
   const checkPermissions = async () => {
+    if (Platform.OS === 'web') return;
+    // Camera
+    try {
+      const { useCameraPermissions: useCamPerm } = require('expo-camera');
+      // Can't use hooks here, so check directly
+      const cam = await require('expo-camera').Camera?.getPermissionsAsync?.();
+      if (cam) setCameraPermission(cam);
+    } catch {}
     // Audio
-    const { status: audioStatus } = await Audio.getPermissionsAsync();
-    setAudioPermission(audioStatus === 'granted');
-
+    try {
+      const { status: audioStatus } = await Audio.getPermissionsAsync();
+      setAudioPermission(audioStatus === 'granted');
+    } catch {}
     // Media Library
-    const { status: mediaStatus } = await MediaLibrary.getPermissionsAsync();
-    setMediaLibraryPermission(mediaStatus === 'granted');
-
+    try {
+      const { status: mediaStatus } = await MediaLibrary.getPermissionsAsync();
+      setMediaLibraryPermission(mediaStatus === 'granted');
+    } catch {}
     // Location
-    const { status: locationStatus } = await Location.getForegroundPermissionsAsync();
-    setLocationPermission(locationStatus === 'granted');
+    try {
+      const { status: locationStatus } = await Location.getForegroundPermissionsAsync();
+      setLocationPermission(locationStatus === 'granted');
+    } catch {}
   };
 
   const handleRequestCamera = async () => {
-    const result = await requestCameraPermission();
-    if (!result.granted && !result.canAskAgain) {
-      Alert.alert(
-        'Permission Required',
-        'Camera permission was denied. Please enable it in your device settings.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Open Settings', onPress: () => Linking.openSettings() },
-        ]
-      );
-    }
+    if (Platform.OS === 'web') return;
+    try {
+      const Camera = require('expo-camera').Camera;
+      const result = await Camera.requestCameraPermissionsAsync();
+      setCameraPermission(result);
+      if (!result.granted && !result.canAskAgain) {
+        Alert.alert(
+          'Permission Required',
+          'Camera permission was denied. Please enable it in your device settings.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => Linking.openSettings() },
+          ]
+        );
+      }
+    } catch {}
   };
 
   const handleRequestAudio = async () => {
+    if (Platform.OS === 'web') return;
     const { status, canAskAgain } = await Audio.requestPermissionsAsync();
     setAudioPermission(status === 'granted');
     if (status !== 'granted' && !canAskAgain) {
@@ -125,6 +229,7 @@ export default function SettingsScreen() {
   };
 
   const handleRequestMediaLibrary = async () => {
+    if (Platform.OS === 'web') return;
     const { status, canAskAgain } = await MediaLibrary.requestPermissionsAsync();
     setMediaLibraryPermission(status === 'granted');
     if (status !== 'granted' && !canAskAgain) {
@@ -140,6 +245,7 @@ export default function SettingsScreen() {
   };
 
   const handleRequestLocation = async () => {
+    if (Platform.OS === 'web') return;
     const { status, canAskAgain } = await Location.requestForegroundPermissionsAsync();
     setLocationPermission(status === 'granted');
     if (status !== 'granted' && !canAskAgain) {
@@ -318,20 +424,23 @@ export default function SettingsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: theme.cardBg, borderBottomColor: theme.cardBorder }]}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Ionicons name="arrow-back" size={24} color={colors.textDark} />
+          <Ionicons name="arrow-back" size={24} color={theme.textDark} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Settings & Privacy</Text>
+        <Text style={[styles.headerTitle, { color: theme.textDark }]}>Settings & Privacy</Text>
         <View style={styles.placeholder} />
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Display Section */}
+        <DisplaySection />
+
         {/* Notifications Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Notifications</Text>
@@ -344,8 +453,9 @@ export default function SettingsScreen() {
               <Switch
                 value={settings.push_notifications}
                 onValueChange={(value) => updateSetting('push_notifications', value)}
-                trackColor={{ false: colors.cardBorder, true: colors.primary }}
+                trackColor={{ false: '#9b8b7a', true: colors.primary }}
                 thumbColor="#fff"
+                ios_backgroundColor="#9b8b7a"
               />
             </View>
 
@@ -359,8 +469,9 @@ export default function SettingsScreen() {
               <Switch
                 value={settings.email_notifications}
                 onValueChange={(value) => updateSetting('email_notifications', value)}
-                trackColor={{ false: colors.cardBorder, true: colors.primary }}
+                trackColor={{ false: '#9b8b7a', true: colors.primary }}
                 thumbColor="#fff"
+                ios_backgroundColor="#9b8b7a"
               />
             </View>
 
@@ -374,8 +485,9 @@ export default function SettingsScreen() {
               <Switch
                 value={settings.event_reminders}
                 onValueChange={(value) => updateSetting('event_reminders', value)}
-                trackColor={{ false: colors.cardBorder, true: colors.primary }}
+                trackColor={{ false: '#9b8b7a', true: colors.primary }}
                 thumbColor="#fff"
+                ios_backgroundColor="#9b8b7a"
               />
             </View>
           </View>
@@ -409,8 +521,9 @@ export default function SettingsScreen() {
               <Switch
                 value={settings.show_checkin_activity}
                 onValueChange={(value) => updateSetting('show_checkin_activity', value)}
-                trackColor={{ false: colors.cardBorder, true: colors.primary }}
+                trackColor={{ false: '#9b8b7a', true: colors.primary }}
                 thumbColor="#fff"
+                ios_backgroundColor="#9b8b7a"
               />
             </View>
           </View>

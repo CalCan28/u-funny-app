@@ -12,10 +12,20 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import { Video, ResizeMode, AVPlaybackStatus } from 'expo-av';
-import YoutubePlayer from 'react-native-youtube-iframe';
+// Native-only video imports — lazy loaded so web bundle skips them
+let Video: any = null;
+let ResizeMode: any = null;
+let YoutubePlayer: any = null;
+
+if (Platform.OS !== 'web') {
+  const av = require('expo-av');
+  Video = av.Video;
+  ResizeMode = av.ResizeMode;
+  YoutubePlayer = require('react-native-youtube-iframe').default;
+}
 import { SetReviewThread } from '../components/SetReviewThread';
 import ReportModal from '../components/ReportModal';
+import { useTheme } from '../contexts/ThemeContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -58,7 +68,7 @@ function VideoHeader({
 }) {
   const [playing, setPlaying] = useState(false);
   const [showVideo, setShowVideo] = useState(false);
-  const videoRef = useRef<Video>(null);
+  const videoRef = useRef<any>(null);
 
   const isStorageOrLocalVideo = videoUri && (
     videoUri.startsWith('file://') ||
@@ -72,7 +82,7 @@ function VideoHeader({
     setPlaying(true);
   };
 
-  const handlePlaybackStatusUpdate = (status: AVPlaybackStatus) => {
+  const handlePlaybackStatusUpdate = (status: any) => {
     if (status.isLoaded && status.didJustFinish) {
       setPlaying(false);
     }
@@ -105,18 +115,43 @@ function VideoHeader({
               </View>
             </View>
           </TouchableOpacity>
-        ) : isStorageOrLocalVideo && videoUri ? (
+        ) : Platform.OS === 'web' ? (
+          // Web: use iframe for YouTube, HTML video for others
+          isYouTubeVideo && videoId ? (
+            <iframe
+              width={SCREEN_WIDTH}
+              height={SCREEN_WIDTH * (9 / 16)}
+              src={`https://www.youtube.com/embed/${videoId}?autoplay=1`}
+              allow="autoplay; encrypted-media"
+              allowFullScreen
+              style={{ border: 'none' }}
+            />
+          ) : isStorageOrLocalVideo && videoUri ? (
+            <video
+              src={videoUri}
+              style={{ width: SCREEN_WIDTH, height: SCREEN_WIDTH * (9 / 16) }}
+              autoPlay
+              controls
+              onEnded={() => setPlaying(false)}
+            />
+          ) : (
+            <View style={styles.noVideoContainer}>
+              <Ionicons name="videocam-off-outline" size={48} color={colors.textMuted} />
+              <Text style={styles.noVideoText}>Video unavailable</Text>
+            </View>
+          )
+        ) : isStorageOrLocalVideo && videoUri && Video ? (
           <Video
             ref={videoRef}
             source={{ uri: videoUri }}
             style={styles.video}
-            resizeMode={ResizeMode.CONTAIN}
+            resizeMode={ResizeMode?.CONTAIN}
             shouldPlay={playing}
             isLooping={false}
             onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
             useNativeControls
           />
-        ) : isYouTubeVideo && videoId ? (
+        ) : isYouTubeVideo && videoId && YoutubePlayer ? (
           <YoutubePlayer
             height={SCREEN_WIDTH * (9 / 16)}
             width={SCREEN_WIDTH}
@@ -153,6 +188,7 @@ function VideoHeader({
 export default function ClipDetailScreen() {
   const navigation = useNavigation();
   const route = useRoute<RouteProp<ClipDetailRouteParams, 'ClipDetail'>>();
+  const { theme } = useTheme();
   const {
     clipId = '',
     clipOwnerId = '',
@@ -167,21 +203,21 @@ export default function ClipDetailScreen() {
   const [showReportModal, setShowReportModal] = useState(false);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: theme.cardBg, borderBottomColor: theme.cardBorder }]}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Ionicons name="arrow-back" size={24} color={colors.textDark} />
+          <Ionicons name="arrow-back" size={24} color={theme.textDark} />
         </TouchableOpacity>
         <View style={styles.headerInfo}>
-          <Text style={styles.headerTitle} numberOfLines={1}>
+          <Text style={[styles.headerTitle, { color: theme.textDark }]} numberOfLines={1}>
             {title}
           </Text>
           {creatorName && (
-            <Text style={styles.headerSubtitle} numberOfLines={1}>
+            <Text style={[styles.headerSubtitle, { color: theme.textMuted }]} numberOfLines={1}>
               by {creatorName}
             </Text>
           )}

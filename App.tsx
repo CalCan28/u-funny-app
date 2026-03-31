@@ -46,17 +46,18 @@ import InboxScreen from './src/screens/InboxScreen';
 import ChatScreen from './src/screens/ChatScreen';
 import NativeOnlyScreen from './src/components/NativeOnlyScreen';
 
-// Screens with native-only imports: lazy-load on native, placeholder on web
+// Screens now web-safe (lazy-load their own native deps internally)
+import ClipDetailScreen from './src/screens/ClipDetailScreen';
+import EditProfileScreen from './src/screens/EditProfileScreen';
+import ShareSetScreen from './src/screens/ShareSetScreen';
+import SettingsScreen from './src/screens/SettingsScreen';
+
+// Fully native screens: lazy-load on native, placeholder on web
 let CheckInScreen: any;
 let BitManagerScreen: any;
 let HostDashboardScreen: any;
-let ClipDetailScreen: any;
-let EditProfileScreen: any;
-let ShareSetScreen: any;
-let SettingsScreen: any;
 
 if (Platform.OS === 'web') {
-  // Web placeholders for fully native screens
   CheckInScreen = ({ navigation }: any) => (
     <NativeOnlyScreen
       title="QR Check-In"
@@ -81,47 +82,10 @@ if (Platform.OS === 'web') {
       navigation={navigation}
     />
   );
-  // These screens can work on web later, but need native imports removed first
-  ClipDetailScreen = ({ navigation }: any) => (
-    <NativeOnlyScreen
-      title="Clip Player"
-      description="Video playback is coming soon to the web version. Use the iOS app for the full experience."
-      icon="play-circle-outline"
-      navigation={navigation}
-    />
-  );
-  EditProfileScreen = ({ navigation }: any) => (
-    <NativeOnlyScreen
-      title="Edit Profile"
-      description="Profile editing with photo upload is coming soon to the web version."
-      icon="person-outline"
-      navigation={navigation}
-    />
-  );
-  ShareSetScreen = ({ navigation }: any) => (
-    <NativeOnlyScreen
-      title="Share Your Set"
-      description="Video uploading requires the mobile app. Download U Funny on iOS to share your sets."
-      icon="cloud-upload-outline"
-      navigation={navigation}
-    />
-  );
-  SettingsScreen = ({ navigation }: any) => (
-    <NativeOnlyScreen
-      title="Settings"
-      description="App settings and permissions are managed through the mobile app."
-      icon="settings-outline"
-      navigation={navigation}
-    />
-  );
 } else {
   CheckInScreen = require('./src/screens/CheckInScreen').default;
   BitManagerScreen = require('./src/screens/BitManagerScreen').default;
   HostDashboardScreen = require('./src/screens/HostDashboardScreen').default;
-  ClipDetailScreen = require('./src/screens/ClipDetailScreen').default;
-  EditProfileScreen = require('./src/screens/EditProfileScreen').default;
-  ShareSetScreen = require('./src/screens/ShareSetScreen').default;
-  SettingsScreen = require('./src/screens/SettingsScreen').default;
 }
 
 // Define navigation types
