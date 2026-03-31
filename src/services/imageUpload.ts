@@ -1,10 +1,10 @@
-import * as FileSystem from 'expo-file-system/legacy';
+import { Platform } from 'react-native';
 import { decode } from 'base64-arraybuffer';
 import { supabase } from './supabase';
 
 /**
  * Upload an image to Supabase Storage
- * @param uri - Local URI of the image (from expo-image-picker)
+ * @param uri - Local URI of the image (from expo-image-picker or file input)
  * @param bucket - Storage bucket name (default: 'avatars')
  * @param folder - Folder path within bucket (usually user ID)
  * @returns Object with publicUrl or error
@@ -15,27 +15,32 @@ export async function uploadImage(
   folder: string
 ): Promise<{ publicUrl: string | null; error: string | null }> {
   try {
-    // Read the file as base64
-    const base64 = await FileSystem.readAsStringAsync(uri, {
-      encoding: 'base64',
-    });
-
     // Get file extension from URI
-    const ext = uri.split('.').pop()?.toLowerCase() || 'jpg';
+    const ext = uri.split('.').pop()?.toLowerCase()?.split('?')[0] || 'jpg';
     const contentType = ext === 'png' ? 'image/png' : 'image/jpeg';
-
-    // Generate unique filename
     const fileName = `${folder}/avatar_${Date.now()}.${ext}`;
 
-    // Convert base64 to ArrayBuffer
-    const arrayBuffer = decode(base64);
+    let uploadData: ArrayBuffer | Blob;
+
+    if (Platform.OS === 'web') {
+      // Web: fetch the blob URL or data URI and upload directly
+      const response = await fetch(uri);
+      uploadData = await response.blob();
+    } else {
+      // Native: read file as base64 then convert to ArrayBuffer
+      const FileSystem = require('expo-file-system/legacy');
+      const base64 = await FileSystem.readAsStringAsync(uri, {
+        encoding: 'base64',
+      });
+      uploadData = decode(base64);
+    }
 
     // Upload to Supabase Storage
     const { data, error } = await supabase.storage
       .from(bucket)
-      .upload(fileName, arrayBuffer, {
+      .upload(fileName, uploadData, {
         contentType,
-        upsert: true, // Overwrite if exists
+        upsert: true,
       });
 
     if (error) {
@@ -49,7 +54,6 @@ export async function uploadImage(
 
     return { publicUrl: urlData.publicUrl, error: null };
   } catch (err: any) {
-    // Sentry captures this automatically
     return { publicUrl: null, error: err.message || 'Failed to upload image' };
   }
 }

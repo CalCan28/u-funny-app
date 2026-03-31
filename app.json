@@ -2,7 +2,7 @@
   "expo": {
     "name": "U Funny",
     "slug": "u-funny-app",
-    "version": "1.0.2",
+    "version": "1.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
     "scheme": "ufunny",
@@ -15,6 +15,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.ufunny.app",
+      "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "U Funny needs your location to find open mics near you.",
         "NSCameraUsageDescription": "U Funny needs camera access to scan QR codes for venue check-in.",
@@ -27,9 +28,20 @@
       ],
       "appleTeamId": "9K439XM936"
     },
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/icon.png",
+      "name": "U Funny",
+      "shortName": "U Funny",
+      "description": "The comedy community app",
+      "backgroundColor": "#f5f1e8",
+      "themeColor": "#6b8e6f"
+    },
     "android": {
       "name": "uFunny",
       "package": "com.ufunnyapp.android",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#f5f1e8"
@@ -100,7 +112,9 @@
           "organization": "u-funny",
           "project": "u-funny-app"
         }
-      ]
+      ],
+      "@react-native-firebase/app",
+      "./plugins/withFirebaseModularHeaders"
     ],
     "extra": {
       "eas": {

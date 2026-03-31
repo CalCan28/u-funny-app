@@ -9,10 +9,21 @@ import {
   StatusBar,
   Dimensions,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
-import YoutubePlayer from 'react-native-youtube-iframe';
-import { Video, ResizeMode, AVPlaybackStatus } from 'expo-av';
 import { Ionicons } from '@expo/vector-icons';
+
+// Native-only video imports — lazy loaded
+let YoutubePlayer: any = null;
+let Video: any = null;
+let ResizeMode: any = null;
+
+if (Platform.OS !== 'web') {
+  YoutubePlayer = require('react-native-youtube-iframe').default;
+  const av = require('expo-av');
+  Video = av.Video;
+  ResizeMode = av.ResizeMode;
+}
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -43,7 +54,7 @@ export default function VideoPlayerModal({
 }: VideoPlayerModalProps) {
   const [playing, setPlaying] = useState(true);
   const [loading, setLoading] = useState(true);
-  const videoRef = useRef<Video>(null);
+  const videoRef = useRef<any>(null);
 
   // Determine if this is a non-YouTube video (local or storage) or YouTube
   const isStorageOrLocalVideo = videoUri && (videoUri.startsWith('file://') || videoUri.startsWith('ph://') || videoUri.startsWith('https://'));
@@ -63,7 +74,7 @@ export default function VideoPlayerModal({
     setLoading(false);
   };
 
-  const handlePlaybackStatusUpdate = (status: AVPlaybackStatus) => {
+  const handlePlaybackStatusUpdate = (status: any) => {
     if (status.isLoaded && status.didJustFinish) {
       setPlaying(false);
     }
@@ -120,32 +131,58 @@ export default function VideoPlayerModal({
             </View>
           )}
 
-          {isStorageOrLocalVideo && videoUri ? (
-            <Video
-              ref={videoRef}
-              source={{ uri: videoUri }}
-              style={styles.localVideo}
-              resizeMode={ResizeMode.CONTAIN}
-              shouldPlay={playing}
-              isLooping={false}
-              onLoad={handleLocalVideoLoad}
-              onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
-              useNativeControls
-            />
-          ) : isYouTubeVideo && videoId ? (
-            <YoutubePlayer
-              height={SCREEN_WIDTH * (9 / 16)}
-              width={SCREEN_WIDTH}
-              play={playing}
-              videoId={videoId}
-              onChangeState={onStateChange}
-              onReady={handleReady}
-              webViewProps={{
-                allowsFullscreenVideo: true,
-                mediaPlaybackRequiresUserAction: false,
-              }}
-            />
-          ) : null}
+          {Platform.OS === 'web' ? (
+            // Web: use iframe for YouTube, HTML video for others
+            isYouTubeVideo && videoId ? (
+              <iframe
+                width={SCREEN_WIDTH}
+                height={SCREEN_WIDTH * (9 / 16)}
+                src={`https://www.youtube.com/embed/${videoId}?autoplay=1`}
+                allow="autoplay; encrypted-media"
+                allowFullScreen
+                style={{ border: 'none' }}
+                onLoad={() => setLoading(false)}
+              />
+            ) : isStorageOrLocalVideo && videoUri ? (
+              <video
+                ref={videoRef}
+                src={videoUri}
+                style={{ width: SCREEN_WIDTH, height: SCREEN_WIDTH * (9 / 16) }}
+                autoPlay
+                controls
+                onLoadedData={() => setLoading(false)}
+                onEnded={() => setPlaying(false)}
+              />
+            ) : null
+          ) : (
+            // Native: use expo-av and youtube-iframe
+            isStorageOrLocalVideo && videoUri && Video ? (
+              <Video
+                ref={videoRef}
+                source={{ uri: videoUri }}
+                style={styles.localVideo}
+                resizeMode={ResizeMode?.CONTAIN}
+                shouldPlay={playing}
+                isLooping={false}
+                onLoad={handleLocalVideoLoad}
+                onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
+                useNativeControls
+              />
+            ) : isYouTubeVideo && videoId && YoutubePlayer ? (
+              <YoutubePlayer
+                height={SCREEN_WIDTH * (9 / 16)}
+                width={SCREEN_WIDTH}
+                play={playing}
+                videoId={videoId}
+                onChangeState={onStateChange}
+                onReady={handleReady}
+                webViewProps={{
+                  allowsFullscreenVideo: true,
+                  mediaPlaybackRequiresUserAction: false,
+                }}
+              />
+            ) : null
+          )}
         </View>
 
         {/* Controls */}

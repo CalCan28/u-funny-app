@@ -5,8 +5,18 @@ import {
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
+  Platform,
 } from 'react-native';
-import * as Sentry from '@sentry/react-native';
+
+// Sentry: use native SDK on mobile, no-op on web
+let Sentry: any = { captureException: () => {} };
+if (Platform.OS !== 'web') {
+  try {
+    Sentry = require('@sentry/react-native');
+  } catch {
+    // Sentry not available
+  }
+}
 
 type Props = {
   children: ReactNode;

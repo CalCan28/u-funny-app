@@ -10,12 +10,33 @@ import {
   Alert,
   Modal,
   Dimensions,
+  Platform,
 } from 'react-native';
-import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
-import * as Location from 'expo-location';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import * as Linking from 'expo-linking';
+
+// Native-only imports: lazy-load so web bundle doesn't pull them in
+let MapView: any = null;
+let Marker: any = null;
+let PROVIDER_DEFAULT: any = null;
+let Location: any = null;
+let AsyncStorage: any = null;
+
+if (Platform.OS !== 'web') {
+  const maps = require('react-native-maps');
+  MapView = maps.default;
+  Marker = maps.Marker;
+  PROVIDER_DEFAULT = maps.PROVIDER_DEFAULT;
+  Location = require('expo-location');
+  AsyncStorage = require('@react-native-async-storage/async-storage').default;
+} else {
+  // Web fallbacks
+  AsyncStorage = {
+    getItem: async (key: string) => localStorage.getItem(key),
+    setItem: async (key: string, value: string) => { localStorage.setItem(key, value); },
+    removeItem: async (key: string) => { localStorage.removeItem(key); },
+  };
+}
 import { supabase } from '../services/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -407,7 +428,7 @@ export default function OpenMicFinderScreen({ navigation }: any) {
   const { theme } = useTheme();
   const [activeTab, setActiveTab] = useState<TabType>('discover');
   const [calendarView, setCalendarView] = useState<CalendarViewType>('calendar');
-  const [location, setLocation] = useState<Location.LocationObject | null>(null);
+  const [location, setLocation] = useState<any | null>(null);
   const [savedEvents, setSavedEvents] = useState<SavedEvent[]>([]);
   const [confirmModal, setConfirmModal] = useState<{ visible: boolean; venue: OpenMic | null }>({
     visible: false,
@@ -422,7 +443,7 @@ export default function OpenMicFinderScreen({ navigation }: any) {
   const [loadingGoogle, setLoadingGoogle] = useState(false);
   const [activeGoogleSearch, setActiveGoogleSearch] = useState(false);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const mapRef = useRef<MapView>(null);
+  const mapRef = useRef<any>(null);
 
   // US center as a wide default — will zoom to user location or search results
   const defaultRegion = {
@@ -434,7 +455,7 @@ export default function OpenMicFinderScreen({ navigation }: any) {
   const [locationDenied, setLocationDenied] = useState(false);
 
   // Fetch open mics from Supabase (both open_mics table AND host-created events)
-  const fetchOpenMics = async (userLocation?: Location.LocationObject) => {
+  const fetchOpenMics = async (userLocation?: any) => {
     setLoadingMics(true);
     try {
       const today = new Date().toISOString().split('T')[0];
@@ -568,18 +589,34 @@ export default function OpenMicFinderScreen({ navigation }: any) {
   // Get location then fetch open mics
   useEffect(() => {
     (async () => {
-      let userLocation: Location.LocationObject | undefined;
-      try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status === 'granted') {
-          userLocation = await Location.getCurrentPositionAsync({});
-          setLocation(userLocation);
-        } else {
+      let userLocation: any | undefined;
+
+      if (Platform.OS !== 'web' && Location) {
+        // Native: use expo-location for GPS
+        try {
+          const { status } = await Location.requestForegroundPermissionsAsync();
+          if (status === 'granted') {
+            userLocation = await Location.getCurrentPositionAsync({});
+            setLocation(userLocation);
+          } else {
+            setLocationDenied(true);
+          }
+        } catch {
           setLocationDenied(true);
         }
-      } catch {
-        setLocationDenied(true);
+      } else if (Platform.OS === 'web' && navigator.geolocation) {
+        // Web: use browser Geolocation API
+        try {
+          const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
+            navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000 })
+          );
+          userLocation = { coords: { latitude: pos.coords.latitude, longitude: pos.coords.longitude } };
+          setLocation(userLocation);
+        } catch {
+          setLocationDenied(true);
+        }
       }
+
       fetchOpenMics(userLocation);
 
       // Auto-search Google Places for nearby open mics
@@ -907,37 +944,45 @@ export default function OpenMicFinderScreen({ navigation }: any) {
             </View>
           )}
 
-          {/* Map */}
-          <View style={styles.mapContainer}>
-            <MapView
-              ref={mapRef}
-              style={styles.map}
-              provider={PROVIDER_DEFAULT}
-              initialRegion={mapRegion}
-              region={mapRegion}
-              showsUserLocation
-              showsMyLocationButton
-            >
-              {filteredMics
-                .filter((mic) => mic.latitude != null && mic.longitude != null && !isNaN(mic.latitude) && !isNaN(mic.longitude))
-                .map((mic) => (
-                  <Marker
-                    key={mic.id}
-                    coordinate={{
-                      latitude: mic.latitude!,
-                      longitude: mic.longitude!,
-                    }}
-                    title={mic.name}
-                    description={
-                      mic.id.startsWith('google_')
-                        ? mic.address
-                        : `${mic.event_date ? formatDate(mic.event_date) : mic.day_of_week ? getDayLabel(mic.day_of_week) : ''} at ${mic.event_time}`
-                    }
-                    pinColor={mic.id.startsWith('google_') ? colors.accent : mic.id.startsWith('host_') ? '#e85d4c' : colors.primary}
-                  />
-                ))}
-            </MapView>
-          </View>
+          {/* Map — native only, hidden on web */}
+          {Platform.OS !== 'web' && MapView ? (
+            <View style={styles.mapContainer}>
+              <MapView
+                ref={mapRef}
+                style={styles.map}
+                provider={PROVIDER_DEFAULT}
+                initialRegion={mapRegion}
+                region={mapRegion}
+                showsUserLocation
+                showsMyLocationButton
+              >
+                {filteredMics
+                  .filter((mic) => mic.latitude != null && mic.longitude != null && !isNaN(mic.latitude) && !isNaN(mic.longitude))
+                  .map((mic) => (
+                    <Marker
+                      key={mic.id}
+                      coordinate={{
+                        latitude: mic.latitude!,
+                        longitude: mic.longitude!,
+                      }}
+                      title={mic.name}
+                      description={
+                        mic.id.startsWith('google_')
+                          ? mic.address
+                          : `${mic.event_date ? formatDate(mic.event_date) : mic.day_of_week ? getDayLabel(mic.day_of_week) : ''} at ${mic.event_time}`
+                      }
+                      pinColor={mic.id.startsWith('google_') ? colors.accent : mic.id.startsWith('host_') ? '#e85d4c' : colors.primary}
+                    />
+                  ))}
+              </MapView>
+            </View>
+          ) : Platform.OS === 'web' ? (
+            <View style={[styles.mapContainer, { justifyContent: 'center', alignItems: 'center' }]}>
+              <Text style={{ color: colors.textMuted, fontSize: 14 }}>
+                📍 Search by city to find open mics near you
+              </Text>
+            </View>
+          ) : null}
 
           {/* Venue List */}
           <View style={styles.venueListContainer}>

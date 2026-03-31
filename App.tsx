@@ -1,45 +1,128 @@
 import 'react-native-gesture-handler';
 import { useEffect } from 'react';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, ActivityIndicator, StyleSheet, Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { NavigationContainer, LinkingOptions } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import * as Sentry from '@sentry/react-native';
 import * as Linking from 'expo-linking';
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 import ErrorBoundary from './src/components/ErrorBoundary';
 
-Sentry.init({
-  dsn: process.env.EXPO_PUBLIC_SENTRY_DSN || '',
-  debug: __DEV__,
-  enabled: !__DEV__,
-  tracesSampleRate: 0.2,
-});
+// Sentry: use native SDK on mobile, skip on web (can add @sentry/react later)
+let Sentry: any = { init: () => {}, wrap: (c: any) => c, captureException: () => {} };
+if (Platform.OS !== 'web') {
+  try {
+    Sentry = require('@sentry/react-native');
+    Sentry.init({
+      dsn: process.env.EXPO_PUBLIC_SENTRY_DSN || '',
+      debug: __DEV__,
+      enabled: !__DEV__,
+      tracesSampleRate: 0.2,
+    });
+  } catch {
+    // Sentry not available
+  }
+}
 import AuthScreen from './src/screens/AuthScreen';
 import HomeScreen from './src/screens/HomeScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import OpenMicFinderScreen from './src/screens/OpenMicFinderScreen';
-import CheckInScreen from './src/screens/CheckInScreen';
 import TonightsLineupScreen from './src/screens/TonightsLineupScreen';
 import CritiqueFeedbackScreen from './src/screens/CritiqueFeedbackScreen';
-import BitManagerScreen from './src/screens/BitManagerScreen';
-import GoPremiumScreen from './src/screens/GoPremiumScreen';
-import ComedyCoachScreen from './src/screens/ComedyCoachScreen';
-import HostDashboardScreen from './src/screens/HostDashboardScreen';
 import JoinEventScreen from './src/screens/JoinEventScreen';
-import EditProfileScreen from './src/screens/EditProfileScreen';
 import TipsCritiquesScreen from './src/screens/TipsCritiquesScreen';
 import RecentsScreen from './src/screens/RecentsScreen';
 import WhatsNewScreen from './src/screens/WhatsNewScreen';
-import SettingsScreen from './src/screens/SettingsScreen';
-import ShareSetScreen from './src/screens/ShareSetScreen';
 import NotificationsScreen from './src/screens/NotificationsScreen';
 import AccountScreen from './src/screens/AccountScreen';
 import ConnectionsScreen from './src/screens/ConnectionsScreen';
 import ViewProfileScreen from './src/screens/ViewProfileScreen';
-import ClipDetailScreen from './src/screens/ClipDetailScreen';
 import ResetPasswordScreen from './src/screens/ResetPasswordScreen';
+import { ThemeProvider, useTheme } from './src/contexts/ThemeContext';
+import { logScreenView } from './src/services/analytics';
+import CommunityDirectoryScreen from './src/screens/CommunityDirectoryScreen';
+import InboxScreen from './src/screens/InboxScreen';
+import ChatScreen from './src/screens/ChatScreen';
+import NativeOnlyScreen from './src/components/NativeOnlyScreen';
+
+// Screens with native-only imports: lazy-load on native, placeholder on web
+let CheckInScreen: any;
+let BitManagerScreen: any;
+let HostDashboardScreen: any;
+let ClipDetailScreen: any;
+let EditProfileScreen: any;
+let ShareSetScreen: any;
+let SettingsScreen: any;
+
+if (Platform.OS === 'web') {
+  // Web placeholders for fully native screens
+  CheckInScreen = ({ navigation }: any) => (
+    <NativeOnlyScreen
+      title="QR Check-In"
+      description="QR code scanning requires the mobile app. Download U Funny on iOS to check in at venues."
+      icon="qr-code-outline"
+      navigation={navigation}
+    />
+  );
+  BitManagerScreen = ({ navigation }: any) => (
+    <NativeOnlyScreen
+      title="Record Your Set"
+      description="Video recording requires the mobile app. Download U Funny on iOS to record and manage your bits."
+      icon="videocam-outline"
+      navigation={navigation}
+    />
+  );
+  HostDashboardScreen = ({ navigation }: any) => (
+    <NativeOnlyScreen
+      title="Host Dashboard"
+      description="The full host dashboard with QR codes and media sharing is available on the mobile app."
+      icon="desktop-outline"
+      navigation={navigation}
+    />
+  );
+  // These screens can work on web later, but need native imports removed first
+  ClipDetailScreen = ({ navigation }: any) => (
+    <NativeOnlyScreen
+      title="Clip Player"
+      description="Video playback is coming soon to the web version. Use the iOS app for the full experience."
+      icon="play-circle-outline"
+      navigation={navigation}
+    />
+  );
+  EditProfileScreen = ({ navigation }: any) => (
+    <NativeOnlyScreen
+      title="Edit Profile"
+      description="Profile editing with photo upload is coming soon to the web version."
+      icon="person-outline"
+      navigation={navigation}
+    />
+  );
+  ShareSetScreen = ({ navigation }: any) => (
+    <NativeOnlyScreen
+      title="Share Your Set"
+      description="Video uploading requires the mobile app. Download U Funny on iOS to share your sets."
+      icon="cloud-upload-outline"
+      navigation={navigation}
+    />
+  );
+  SettingsScreen = ({ navigation }: any) => (
+    <NativeOnlyScreen
+      title="Settings"
+      description="App settings and permissions are managed through the mobile app."
+      icon="settings-outline"
+      navigation={navigation}
+    />
+  );
+} else {
+  CheckInScreen = require('./src/screens/CheckInScreen').default;
+  BitManagerScreen = require('./src/screens/BitManagerScreen').default;
+  HostDashboardScreen = require('./src/screens/HostDashboardScreen').default;
+  ClipDetailScreen = require('./src/screens/ClipDetailScreen').default;
+  EditProfileScreen = require('./src/screens/EditProfileScreen').default;
+  ShareSetScreen = require('./src/screens/ShareSetScreen').default;
+  SettingsScreen = require('./src/screens/SettingsScreen').default;
+}
 
 // Define navigation types
 export type RootStackParamList = {
@@ -55,8 +138,6 @@ export type RootStackParamList = {
   TonightsLineup: { eventId?: string; venueName?: string };
   CritiqueFeedback: { eventId?: string; venueName?: string };
   BitManager: undefined;
-  GoPremium: undefined;
-  ComedyCoach: undefined;
   HostDashboard: undefined;
   JoinEvent: { roomCode: string };
   WhatsNew: undefined;
@@ -66,6 +147,9 @@ export type RootStackParamList = {
   Account: undefined;
   Connections: { type: 'jokers' | 'audience'; userId?: string };
   ViewProfile: { userId: string };
+  CommunityDirectory: undefined;
+  Inbox: undefined;
+  Chat: { conversationId?: string; otherUserId?: string; otherUserName?: string };
   ClipDetail: {
     clipId: string;
     clipOwnerId: string;
@@ -102,8 +186,6 @@ const linking: LinkingOptions<RootStackParamList> = {
       Recents: 'recents',
       OpenMicFinder: 'open-mics',
       BitManager: 'library',
-      ComedyCoach: 'coach',
-      GoPremium: 'premium',
       HostDashboard: 'host',
       TonightsLineup: 'lineup/:eventId?',
       CritiqueFeedback: 'feedback/:eventId?',
@@ -115,6 +197,7 @@ const linking: LinkingOptions<RootStackParamList> = {
 
 function AppNavigator() {
   const { user, loading, passwordRecovery } = useAuth();
+  const { theme } = useTheme();
 
   // Handle deep links when app is already open
   useEffect(() => {
@@ -137,7 +220,7 @@ function AppNavigator() {
 
   if (passwordRecovery) {
     return (
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Navigator id="PasswordReset" screenOptions={{ headerShown: false }}>
         <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
       </Stack.Navigator>
     );
@@ -145,10 +228,11 @@ function AppNavigator() {
 
   return (
     <Stack.Navigator
+      id="RootStack"
       screenOptions={{
-        headerStyle: { backgroundColor: '#f5f1e8' },
-        headerTintColor: '#5c4a3a',
-        contentStyle: { backgroundColor: '#f5f1e8' },
+        headerStyle: { backgroundColor: theme.background },
+        headerTintColor: theme.textDark,
+        contentStyle: { backgroundColor: theme.background },
       }}
     >
       {!user ? (
@@ -212,16 +296,6 @@ function AppNavigator() {
             options={{ title: 'My Bits' }}
           />
           <Stack.Screen
-            name="GoPremium"
-            component={GoPremiumScreen}
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen
-            name="ComedyCoach"
-            component={ComedyCoachScreen}
-            options={{ title: 'AI Coach' }}
-          />
-          <Stack.Screen
             name="HostDashboard"
             component={HostDashboardScreen}
             options={{ headerShown: false }}
@@ -267,6 +341,21 @@ function AppNavigator() {
             options={{ headerShown: false }}
           />
           <Stack.Screen
+            name="CommunityDirectory"
+            component={CommunityDirectoryScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="Inbox"
+            component={InboxScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="Chat"
+            component={ChatScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
             name="ClipDetail"
             component={ClipDetailScreen}
             options={{ headerShown: false }}
@@ -282,11 +371,23 @@ function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
-          <AuthProvider>
-            <NavigationContainer linking={linking}>
-              <AppNavigator />
-            </NavigationContainer>
-          </AuthProvider>
+          <ThemeProvider>
+            <AuthProvider>
+              <NavigationContainer
+                linking={linking}
+                onStateChange={(state) => {
+                  if (state) {
+                    const route = state.routes[state.index];
+                    if (route?.name) {
+                      logScreenView(route.name);
+                    }
+                  }
+                }}
+              >
+                <AppNavigator />
+              </NavigationContainer>
+            </AuthProvider>
+          </ThemeProvider>
         </QueryClientProvider>
       </ErrorBoundary>
     </GestureHandlerRootView>
